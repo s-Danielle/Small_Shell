@@ -5,13 +5,17 @@
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-
+#define DEFAULT_PROMPT_LINE ("smash> ")
 class Command {
 // TODO: Add your data members
 public:
-    Command(const char *cmd_line);
+    char commandString[COMMAND_MAX_LENGTH];
+    Command(const char *cmd_line){
+        memset(this->commandString, 0, COMMAND_MAX_LENGTH);
+        strcpy(this->commandString,cmd_line);
+    };
 
-    virtual ~Command();
+    virtual ~Command()=default;
 
     virtual void execute() = 0;
     //virtual void prepare();
@@ -21,7 +25,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char *cmd_line);
+    BuiltInCommand(const char *cmdLine) : Command(cmdLine) {};
 
     virtual ~BuiltInCommand() {}
 };
@@ -202,8 +206,19 @@ public:
 
 class SmallShell {
 private:
-    // TODO: Add your data members
     SmallShell();
+    char current_path[COMMAND_MAX_LENGTH];
+    char last_path[COMMAND_MAX_LENGTH];
+    char prompt_line[COMMAND_MAX_LENGTH];
+    char* aliases[COMMAND_MAX_LENGTH]; //not its final form
+public:
+    const char *getCurrentPath() const;
+    const char *getLastPath() const;
+    const char *getPromptLine() const;
+    void updateCurrentPath(const char* new_path);
+    void updatePrompt(const char* new_prompt);
+    void printCWD();
+private:
 
 public:
     Command *CreateCommand(const char *cmd_line);

@@ -77,7 +77,10 @@ void _removeBackgroundSign(char *cmd_line) {
 // TODO: Add your implementation for classes in Commands.h 
 
 SmallShell::SmallShell() {
-// TODO: add your implementation
+    memset(last_path, 0, COMMAND_MAX_LENGTH);
+    memset(current_path, 0, COMMAND_MAX_LENGTH);
+    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
+    getcwd
 }
 
 SmallShell::~SmallShell() {
@@ -111,7 +114,36 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
-    // Command* cmd = CreateCommand(cmd_line);
-    // cmd->execute();
+    Command* cmd = CreateCommand(cmd_line);
+    cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+const char *SmallShell::getCurrentPath() const {
+    return current_path;
+}
+
+const char *SmallShell::getLastPath() const {
+    return last_path;
+}
+
+const char *SmallShell::getPromptLine() const {
+    return prompt_line;
+}
+
+void SmallShell::updateCurrentPath(const char *new_path) {
+    memset(last_path, 0, COMMAND_MAX_LENGTH);
+    strcpy(last_path,current_path);
+    memset(current_path, 0, COMMAND_MAX_LENGTH);
+    strcpy(current_path, new_path);
+}
+
+
+void SmallShell::updatePrompt(const char *new_prompt) {
+    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
+    strcpy(prompt_line, new_prompt);
+}
+
+void SmallShell::printCWD() {
+    std::cout << "smash pid is " << getppid() << endl; //stays smash even with chprompt @54
 }
