@@ -84,7 +84,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
+//TODO remove & and check it later so it doesnt screw up built in commands
   if (firstWord == "pwd") {
     return new GetCurrDirCommand(cmd_line);
   }
@@ -92,10 +92,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     return new ShowPidCommand(cmd_line);
   }
   else if (firstWord == "cd") {
-      return new ChangeDirCommand(cmd_line, reinterpret_cast<const char **>(&this->last_path));
+      return new ChangeDirCommand(cmd_line, this->last_path);
   }
   else if (firstWord == "chprompt") {
-      return new changePrompt(cmd_line, reinterpret_cast<const char **>(&this->prompt_line));
+      return new changePrompt(cmd_line, this->prompt_line);
   }
   //else {
     //return new ExternalCommand(cmd_line);
@@ -121,35 +121,82 @@ SmallShell::SmallShell() {
 }
 
 
-
-
 void updatePrompt(const char *new_prompt, char* promptLine) {
     memset(promptLine, 0, COMMAND_MAX_LENGTH);
     strcpy(promptLine, new_prompt);
 }
 
-
-void getCurrentPath(char *buff) {
-    if(! getcwd(buff,COMMAND_MAX_LENGTH)){
+void getCWD(char* buff) {
+    if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
         ::perror("smash error: getcwd() failed");
     }
 }
 
 void GetCurrDirCommand::execute() {
-    char buf[COMMAND_MAX_LENGTH];
-    getCurrentPath(buf);
-    std::cout << buf << endl; //stays smash even with chprompt @54
+    char buff[COMMAND_MAX_LENGTH];
+    getCWD(buff);
+    std::cout << buff << endl; //stays smash even with chprompt @54
 }
-
 void changePrompt::execute() {
 
-
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc= _parseCommandLine(this->commandString,arguments);
+    if (argc==1){ //reset
+        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
+        strcpy(pPromptLine,DEFAULT_PROMPT_LINE);
+    }
+    else { //we can ignore other parameters @pdf
+        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
+        strcpy(pPromptLine,arguments[1]);
+        ::strcat(pPromptLine, "> ");
+    }
 }
 
 void ShowPidCommand::execute() {
-
+    std::cout << "smash pid is " << getppid() << endl; //stays smash even with chprompt @54
 }
 
-void ChangeDirCommand::execute() {
+void updateLastPWD(char* last_pwd, char* current_pwd) {
+    memset(last_pwd, 0, COMMAND_MAX_LENGTH);
+    strcpy(last_pwd, current_pwd);
+}
 
+
+void ChangeDirCommand::execute() {
+    char buff_cwd[COMMAND_MAX_LENGTH];
+    getCWD(buff_cwd);
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc = _parseCommandLine(this->commandString, arguments);
+
+    if (argc > 2) {
+        ::perror("smash error: cd: too many arguments\n");
+        return;
+    }
+    if (argc == 1) {
+        updateLastPWD(plast_cwd, buff_cwd);
+        return;
+    }
+    string first_arg = arguments[1];
+
+    if (first_arg.compare("-") == 0) {
+        if (plast_cwd[0] == '\0') {
+            ::perror("smash error: cd: OLDPWD not set");
+            cout << "error nor oldpwd" << endl;
+            return;
+        } else {
+            if (chdir(plast_cwd) != 0) {
+                perror("chdir failed");
+                return;
+            } else {
+                //TODO handle - logic after they answer in piazza @179
+                return;
+            }
+        }
+    }
+    if (chdir(first_arg.c_str()) != 0) {
+        perror("chdir failed");
+        return;
+    } else {
+        updateLastPWD(plast_cwd, buff_cwd);
+    }
 }

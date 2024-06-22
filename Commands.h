@@ -71,10 +71,10 @@ public:
 
 class ChangeDirCommand : public BuiltInCommand {
 private:
-    const char** plast_cwd;
+     char* plast_cwd;
 public:
 // TODO: Add your data members public:
-    ChangeDirCommand(const char *cmd_line, const char **pLast_cwd) : BuiltInCommand(cmd_line), plast_cwd(pLast_cwd){}
+    ChangeDirCommand(const char *cmd_line,  char *pLast_cwd) : BuiltInCommand(cmd_line), plast_cwd(pLast_cwd){}
 
     virtual ~ChangeDirCommand() {}
 
@@ -208,9 +208,9 @@ public:
 
 class changePrompt : public BuiltInCommand {
 private:
-    const char** pPromptLine;
+     char* pPromptLine;
 public:
-    changePrompt(const char *cmd_line,const char** promptLine): BuiltInCommand(cmd_line), pPromptLine(promptLine) {  }
+    changePrompt(const char *cmd_line, char* promptLine): BuiltInCommand(cmd_line), pPromptLine(promptLine) {  }
 
     virtual ~changePrompt() {}
 
