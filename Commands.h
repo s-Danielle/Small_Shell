@@ -114,9 +114,13 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
 public:
     class JobEntry {
-        // TODO: Add your data members
+        int id, pid;
+        char cmd_str[COMMAND_MAX_LENGTH];
+        JobEntry(int id, int pis, char* str) : id(id),pid(pid){ strcpy(cmd_str,str);}
+        ~JobEntry()=default;
     };
-    // TODO: Add your data members
+    std::vector<JobEntry*> entries;
+
 public:
     JobsList();
 
@@ -137,15 +141,15 @@ public:
     JobEntry *getLastJob(int *lastJobId);
 
     JobEntry *getLastStoppedJob(int *jobId);
-    // TODO: Add extra methods or modify exisitng ones as needed
+    // TODO: Add extra methods or modify existing ones as needed
 };
 
 class JobsCommand : public BuiltInCommand {
-    // TODO: Add your data members
+    JobsList *j_list;
 public:
-    JobsCommand(const char *cmd_line, JobsList *jobs);
+    JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), j_list(jobs){}
 
-    virtual ~JobsCommand() {}
+    virtual ~JobsCommand() =default;
 
     void execute() override;
 };
@@ -172,9 +176,9 @@ public:
 
 class ListDirCommand : public BuiltInCommand {
 public:
-    ListDirCommand(const char *cmd_line);
+    ListDirCommand(const char *cmd_line): BuiltInCommand(cmd_line) {}
 
-    virtual ~ListDirCommand() {}
+    virtual ~ListDirCommand() = default;
 
     void execute() override;
 };
@@ -221,6 +225,7 @@ class SmallShell {
 private:
     SmallShell();
 public:
+    JobsList *jobsList;
      char prompt_line[COMMAND_MAX_LENGTH];
      char last_path[COMMAND_MAX_LENGTH];
     char* aliases[COMMAND_MAX_LENGTH]{}; //not its final form

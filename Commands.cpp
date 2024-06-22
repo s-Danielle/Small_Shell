@@ -85,6 +85,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 //TODO remove & and check it later so it doesnt screw up built in commands
+//also decode aliases
   if (firstWord == "pwd") {
     return new GetCurrDirCommand(cmd_line);
   }
@@ -96,6 +97,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
   }
   else if (firstWord == "chprompt") {
       return new changePrompt(cmd_line, this->prompt_line);
+  }
+  else if (firstWord == "jobs") {
+      return new  JobsCommand(cmd_line, this->jobsList)
   }
   //else {
     //return new ExternalCommand(cmd_line);
@@ -181,11 +185,10 @@ void ChangeDirCommand::execute() {
     if (first_arg.compare("-") == 0) {
         if (plast_cwd[0] == '\0') {
             ::perror("smash error: cd: OLDPWD not set");
-            cout << "error nor oldpwd" << endl;
             return;
         } else {
             if (chdir(plast_cwd) != 0) {
-                perror("chdir failed");
+                perror("smash error: chdir() failed");
                 return;
             } else {
                 //TODO handle - logic after they answer in piazza @179
@@ -194,9 +197,47 @@ void ChangeDirCommand::execute() {
         }
     }
     if (chdir(first_arg.c_str()) != 0) {
-        perror("chdir failed");
+        perror("smash error: chdir() failed");
         return;
     } else {
         updateLastPWD(plast_cwd, buff_cwd);
     }
+}
+
+/* LISTDIR FUNCTIONS*/
+#define DIR_BUF_MAX_LENGTH (2000) //to do check piazza for actual size
+
+struct ListDirEntry{
+    string name, type;
+};
+
+bool compareNames(const ListDirEntry &a,const ListDirEntry &b){
+    return a.name<b.name;
+}
+
+void ListDirCommand::execute() {
+    /**
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc = _parseCommandLine(this->commandString, arguments);
+
+    char* path=arguments[1];
+    int fd = open(path, )
+    if (fd == -1) {
+        perror("smash error: open() failed");
+        return;
+    }
+    char dirBuff[DIR_BUF_MAX_LENGTH];
+    vector<ListDirEntry> entries;
+    int position=0;
+    struct linux_dirent* d; //will not work for me
+
+**/
+}
+
+
+
+
+/** JOBS FUNCS **/
+void JobsCommand::execute() {
+    j_list->printJobsList();
 }
