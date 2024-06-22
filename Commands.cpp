@@ -76,38 +76,30 @@ void _removeBackgroundSign(char *cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() {
-    memset(last_path, 0, COMMAND_MAX_LENGTH);
-    memset(current_path, 0, COMMAND_MAX_LENGTH);
-    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
-    getcwd
-}
-
-SmallShell::~SmallShell() {
-// TODO: add your implementation
-}
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
-  if (firstWord.compare("pwd") == 0) {
+  if (firstWord == "pwd") {
     return new GetCurrDirCommand(cmd_line);
   }
-  else if (firstWord.compare("showpid") == 0) {
+  else if (firstWord == "showpid") {
     return new ShowPidCommand(cmd_line);
   }
-  else if ...
-  .....
-  else {
-    return new ExternalCommand(cmd_line);
+  else if (firstWord == "cd") {
+      return new ChangeDirCommand(cmd_line, reinterpret_cast<const char **>(&this->last_path));
   }
-  */
+  else if (firstWord == "chprompt") {
+      return new changePrompt(cmd_line);
+  }
+  //else {
+    //return new ExternalCommand(cmd_line);
+  //}
     return nullptr;
 }
 
@@ -115,28 +107,20 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
     Command* cmd = CreateCommand(cmd_line);
-    cmd->execute();
+    if (cmd){
+        cmd->execute();
+    }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-const char *SmallShell::getCurrentPath() const {
-    return current_path;
-}
 
-const char *SmallShell::getLastPath() const {
-    return last_path;
-}
-
-const char *SmallShell::getPromptLine() const {
-    return prompt_line;
-}
-
-void SmallShell::updateCurrentPath(const char *new_path) {
+SmallShell::SmallShell() {
     memset(last_path, 0, COMMAND_MAX_LENGTH);
-    strcpy(last_path,current_path);
-    memset(current_path, 0, COMMAND_MAX_LENGTH);
-    strcpy(current_path, new_path);
+    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
+    ::strcpy(prompt_line,DEFAULT_PROMPT_LINE);
 }
+
+
 
 
 void SmallShell::updatePrompt(const char *new_prompt) {
@@ -144,6 +128,15 @@ void SmallShell::updatePrompt(const char *new_prompt) {
     strcpy(prompt_line, new_prompt);
 }
 
-void SmallShell::printCWD() {
-    std::cout << "smash pid is " << getppid() << endl; //stays smash even with chprompt @54
+
+void SmallShell::getCurrentPath(char *buff) {
+    if(! getcwd(buff,COMMAND_MAX_LENGTH)){
+        ::perror("smash error: getcwd() failed");
+    }
+}
+
+void GetCurrDirCommand::execute() {
+    char buf[COMMAND_MAX_LENGTH];
+    SmallShell::getCurrentPath(buf);
+    std::cout << buf << endl; //stays smash even with chprompt @54
 }

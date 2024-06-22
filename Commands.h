@@ -70,8 +70,11 @@ public:
 };
 
 class ChangeDirCommand : public BuiltInCommand {
+private:
+    const char** plast_cwd;
+public:
 // TODO: Add your data members public:
-    ChangeDirCommand(const char *cmd_line, char **plastPwd);
+    ChangeDirCommand(const char *cmd_line, const char **pLast_cwd) : BuiltInCommand(cmd_line), plast_cwd(pLast_cwd){}
 
     virtual ~ChangeDirCommand() {}
 
@@ -80,7 +83,7 @@ class ChangeDirCommand : public BuiltInCommand {
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-    GetCurrDirCommand(const char *cmd_line);
+    GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
     virtual ~GetCurrDirCommand() {}
 
@@ -203,24 +206,26 @@ public:
     void execute() override;
 };
 
+class changePrompt : public BuiltInCommand {
+public:
+    changePrompt(const char *cmd_line);
+
+    virtual ~changePrompt() {}
+
+    void execute() override;
+};
 
 class SmallShell {
 private:
     SmallShell();
-    char current_path[COMMAND_MAX_LENGTH];
-    char last_path[COMMAND_MAX_LENGTH];
-    char prompt_line[COMMAND_MAX_LENGTH];
-    char* aliases[COMMAND_MAX_LENGTH]; //not its final form
 public:
-    const char *getCurrentPath() const;
-    const char *getLastPath() const;
-    const char *getPromptLine() const;
-    void updateCurrentPath(const char* new_path);
-    void updatePrompt(const char* new_prompt);
-    void printCWD();
-private:
+    static void getCurrentPath(char* buff);
+    static char *getPromptLine() ;
+    static char prompt_line[COMMAND_MAX_LENGTH];
+    static char last_path[COMMAND_MAX_LENGTH];
+    char* aliases[COMMAND_MAX_LENGTH]{}; //not its final form
 
-public:
+    static void updatePrompt(const char* new_prompt);
     Command *CreateCommand(const char *cmd_line);
 
     SmallShell(SmallShell const &) = delete; // disable copy ctor
@@ -232,10 +237,11 @@ public:
         return instance;
     }
 
-    ~SmallShell();
+    ~SmallShell()=default;
 
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
+
 };
 
 #endif //SMASH_COMMAND_H_
