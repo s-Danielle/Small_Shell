@@ -99,7 +99,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
       return new changePrompt(cmd_line, this->prompt_line);
   }
   else if (firstWord == "jobs") {
-      return new  JobsCommand(cmd_line, this->jobsList)
+      return new  JobsCommand(cmd_line, this->jobsList);
   }
   //else {
     //return new ExternalCommand(cmd_line);
