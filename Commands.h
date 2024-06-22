@@ -92,7 +92,7 @@ public:
 
 class ShowPidCommand : public BuiltInCommand {
 public:
-    ShowPidCommand(const char *cmd_line);
+    ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
     virtual ~ShowPidCommand() {}
 
@@ -207,8 +207,10 @@ public:
 };
 
 class changePrompt : public BuiltInCommand {
+private:
+    const char** pPromptLine;
 public:
-    changePrompt(const char *cmd_line);
+    changePrompt(const char *cmd_line,const char** promptLine): BuiltInCommand(cmd_line), pPromptLine(promptLine) {  }
 
     virtual ~changePrompt() {}
 
@@ -219,13 +221,10 @@ class SmallShell {
 private:
     SmallShell();
 public:
-    static void getCurrentPath(char* buff);
-    static char *getPromptLine() ;
-    static char prompt_line[COMMAND_MAX_LENGTH];
-    static char last_path[COMMAND_MAX_LENGTH];
+     char prompt_line[COMMAND_MAX_LENGTH];
+     char last_path[COMMAND_MAX_LENGTH];
     char* aliases[COMMAND_MAX_LENGTH]{}; //not its final form
 
-    static void updatePrompt(const char* new_prompt);
     Command *CreateCommand(const char *cmd_line);
 
     SmallShell(SmallShell const &) = delete; // disable copy ctor

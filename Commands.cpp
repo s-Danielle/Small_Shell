@@ -95,7 +95,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
       return new ChangeDirCommand(cmd_line, reinterpret_cast<const char **>(&this->last_path));
   }
   else if (firstWord == "chprompt") {
-      return new changePrompt(cmd_line);
+      return new changePrompt(cmd_line, reinterpret_cast<const char **>(&this->prompt_line));
   }
   //else {
     //return new ExternalCommand(cmd_line);
@@ -123,13 +123,13 @@ SmallShell::SmallShell() {
 
 
 
-void SmallShell::updatePrompt(const char *new_prompt) {
-    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
-    strcpy(prompt_line, new_prompt);
+void updatePrompt(const char *new_prompt, char* promptLine) {
+    memset(promptLine, 0, COMMAND_MAX_LENGTH);
+    strcpy(promptLine, new_prompt);
 }
 
 
-void SmallShell::getCurrentPath(char *buff) {
+void getCurrentPath(char *buff) {
     if(! getcwd(buff,COMMAND_MAX_LENGTH)){
         ::perror("smash error: getcwd() failed");
     }
@@ -137,6 +137,19 @@ void SmallShell::getCurrentPath(char *buff) {
 
 void GetCurrDirCommand::execute() {
     char buf[COMMAND_MAX_LENGTH];
-    SmallShell::getCurrentPath(buf);
+    getCurrentPath(buf);
     std::cout << buf << endl; //stays smash even with chprompt @54
+}
+
+void changePrompt::execute() {
+
+
+}
+
+void ShowPidCommand::execute() {
+
+}
+
+void ChangeDirCommand::execute() {
+
 }
