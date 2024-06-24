@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unordered_map>
 
 using namespace std;
 
@@ -110,9 +111,19 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     return nullptr;
 }
 
-void SmallShell::executeCommand(const char *cmd_line) {
+void SmallShell::executeCommand(char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
+    /** parse command.
+     * check for '&'.
+     *
+     */
+    bool isBg = _isBackgroundComamnd(cmd_line);
+    if(isBg){
+        _removeBackgroundSign(cmd_line);
+    }
+    char *argv[COMMAND_MAX_ARGS];
+    int argc = _parseCommandLine(cmd_line, argv);
     Command* cmd = CreateCommand(cmd_line);
     if (cmd){
         cmd->execute();
@@ -208,32 +219,20 @@ void ChangeDirCommand::execute() {
 }
 
 /* LISTDIR FUNCTIONS*/
-#define DIR_BUF_MAX_LENGTH (2000) //to do check piazza for actual size
+#define DIR_BUF_MAX_LENGTH (2000) //to do check piazza for actual size|| i dont get what is this for
+#define BUFF_SIZE 1024
 
-struct ListDirEntry{
-    string name, type;
+struct linux_dirent {
+    unsigned long  d_ino;    // Inode number
+    unsigned long  d_off;    // Offset to next linux_dirent
+    unsigned short d_reclen; // Length of this linux_dirent
+    char           d_name[]; // Filename (null-terminated)
 };
 
-bool compareNames(const ListDirEntry &a,const ListDirEntry &b){
-    return a.name<b.name;
-}
 
-void ListDirCommand::execute() {
-    char *arguments[COMMAND_MAX_LENGTH];
-    int argc = _parseCommandLine(this->commandString, arguments);
+void ListDirCommand::execute(){
 
-    char* path=arguments[1];
-    int fd = open(path, );
-    if (fd == -1) {
-        perror("smash error: open() failed");
-        return;
-    }
-    char dirBuff[DIR_BUF_MAX_LENGTH];
-    vector<ListDirEntry> entries;
-    int position=0;
-    struct linux_dirent* d; //will not work for me
-
-}
+} 
 
 
 
