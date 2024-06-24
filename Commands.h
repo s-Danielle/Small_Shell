@@ -2,16 +2,21 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <cstring>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-
+#define DEFAULT_PROMPT_LINE ("smash> ")
 class Command {
 // TODO: Add your data members
 public:
-    Command(const char *cmd_line);
+    char commandString[COMMAND_MAX_LENGTH];
+    Command(const char *cmd_line){
+        memset(this->commandString, 0, COMMAND_MAX_LENGTH);
+        strcpy(this->commandString,cmd_line);
+    };
 
-    virtual ~Command();
+    virtual ~Command()=default;
 
     virtual void execute() = 0;
     //virtual void prepare();
@@ -21,7 +26,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char *cmd_line);
+    BuiltInCommand(const char *cmdLine) : Command(cmdLine) {};
 
     virtual ~BuiltInCommand() {}
 };
@@ -66,8 +71,11 @@ public:
 };
 
 class ChangeDirCommand : public BuiltInCommand {
+private:
+     char* plast_cwd;
+public:
 // TODO: Add your data members public:
-    ChangeDirCommand(const char *cmd_line, char **plastPwd);
+    ChangeDirCommand(const char *cmd_line,  char *pLast_cwd) : BuiltInCommand(cmd_line), plast_cwd(pLast_cwd){}
 
     virtual ~ChangeDirCommand() {}
 
@@ -76,7 +84,7 @@ class ChangeDirCommand : public BuiltInCommand {
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-    GetCurrDirCommand(const char *cmd_line);
+    GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
     virtual ~GetCurrDirCommand() {}
 
@@ -85,7 +93,7 @@ public:
 
 class ShowPidCommand : public BuiltInCommand {
 public:
-    ShowPidCommand(const char *cmd_line);
+    ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
     virtual ~ShowPidCommand() {}
 
@@ -107,9 +115,13 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
 public:
     class JobEntry {
-        // TODO: Add your data members
+        int id, pid;
+        char cmd_str[COMMAND_MAX_LENGTH];
+        JobEntry(int id, int pis, char* str) : id(id),pid(pid){ strcpy(cmd_str,str);}
+        ~JobEntry()=default;
     };
-    // TODO: Add your data members
+    std::vector<JobEntry*> entries;
+
 public:
     JobsList();
 
@@ -130,15 +142,15 @@ public:
     JobEntry *getLastJob(int *lastJobId);
 
     JobEntry *getLastStoppedJob(int *jobId);
-    // TODO: Add extra methods or modify exisitng ones as needed
+    // TODO: Add extra methods or modify existing ones as needed
 };
 
 class JobsCommand : public BuiltInCommand {
-    // TODO: Add your data members
+    JobsList *j_list;
 public:
-    JobsCommand(const char *cmd_line, JobsList *jobs);
+    JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), j_list(jobs){}
 
-    virtual ~JobsCommand() {}
+    virtual ~JobsCommand() =default;
 
     void execute() override;
 };
@@ -165,9 +177,9 @@ public:
 
 class ListDirCommand : public BuiltInCommand {
 public:
-    ListDirCommand(const char *cmd_line);
+    ListDirCommand(const char *cmd_line): BuiltInCommand(cmd_line) {}
 
-    virtual ~ListDirCommand() {}
+    virtual ~ListDirCommand() = default;
 
     void execute() override;
 };
@@ -199,13 +211,26 @@ public:
     void execute() override;
 };
 
+class changePrompt : public BuiltInCommand {
+private:
+     char* pPromptLine;
+public:
+    changePrompt(const char *cmd_line, char* promptLine): BuiltInCommand(cmd_line), pPromptLine(promptLine) {  }
+
+    virtual ~changePrompt() {}
+
+    void execute() override;
+};
 
 class SmallShell {
 private:
-    // TODO: Add your data members
     SmallShell();
-
 public:
+    JobsList *jobsList;
+     char prompt_line[COMMAND_MAX_LENGTH];
+     char last_path[COMMAND_MAX_LENGTH];
+    char* aliases[COMMAND_MAX_LENGTH]{}; //not its final form
+
     Command *CreateCommand(const char *cmd_line);
 
     SmallShell(SmallShell const &) = delete; // disable copy ctor
@@ -217,10 +242,11 @@ public:
         return instance;
     }
 
-    ~SmallShell();
+    ~SmallShell()=default;
 
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
+
 };
 
 #endif //SMASH_COMMAND_H_

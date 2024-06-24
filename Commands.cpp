@@ -6,6 +6,9 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -76,42 +79,166 @@ void _removeBackgroundSign(char *cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() {
-// TODO: add your implementation
-}
-
-SmallShell::~SmallShell() {
-// TODO: add your implementation
-}
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-  if (firstWord.compare("pwd") == 0) {
+//TODO remove & and check it later so it doesnt screw up built in commands
+//also decode aliases
+  if (firstWord == "pwd") {
     return new GetCurrDirCommand(cmd_line);
   }
-  else if (firstWord.compare("showpid") == 0) {
+  else if (firstWord == "showpid") {
     return new ShowPidCommand(cmd_line);
   }
-  else if ...
-  .....
-  else {
-    return new ExternalCommand(cmd_line);
+  else if (firstWord == "cd") {
+      return new ChangeDirCommand(cmd_line, this->last_path);
   }
-  */
+  else if (firstWord == "chprompt") {
+      return new changePrompt(cmd_line, this->prompt_line);
+  }
+  else if (firstWord == "jobs") {
+      return new  JobsCommand(cmd_line, this->jobsList);
+  }
+  //else {
+    //return new ExternalCommand(cmd_line);
+  //}
     return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
-    // Command* cmd = CreateCommand(cmd_line);
-    // cmd->execute();
+    Command* cmd = CreateCommand(cmd_line);
+    if (cmd){
+        cmd->execute();
+    }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+
+SmallShell::SmallShell() {
+    memset(last_path, 0, COMMAND_MAX_LENGTH);
+    memset(prompt_line, 0, COMMAND_MAX_LENGTH);
+    ::strcpy(prompt_line,DEFAULT_PROMPT_LINE);
+}
+
+
+void updatePrompt(const char *new_prompt, char* promptLine) {
+    memset(promptLine, 0, COMMAND_MAX_LENGTH);
+    strcpy(promptLine, new_prompt);
+}
+
+void getCWD(char* buff) {
+    if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
+        ::perror("smash error: getcwd() failed");
+    }
+}
+
+void GetCurrDirCommand::execute() {
+    char buff[COMMAND_MAX_LENGTH];
+    getCWD(buff);
+    std::cout << buff << endl; //stays smash even with chprompt @54
+}
+void changePrompt::execute() {
+
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc= _parseCommandLine(this->commandString,arguments);
+    if (argc==1){ //reset
+        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
+        strcpy(pPromptLine,DEFAULT_PROMPT_LINE);
+    }
+    else { //we can ignore other parameters @pdf
+        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
+        strcpy(pPromptLine,arguments[1]);
+        ::strcat(pPromptLine, "> ");
+    }
+}
+
+void ShowPidCommand::execute() {
+    std::cout << "smash pid is " << getppid() << endl; //stays smash even with chprompt @54
+}
+
+void updateLastPWD(char* last_pwd, char* current_pwd) {
+    memset(last_pwd, 0, COMMAND_MAX_LENGTH);
+    strcpy(last_pwd, current_pwd);
+}
+
+
+void ChangeDirCommand::execute() {
+    char buff_cwd[COMMAND_MAX_LENGTH];
+    getCWD(buff_cwd);
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc = _parseCommandLine(this->commandString, arguments);
+
+    if (argc > 2) {
+        ::perror("smash error: cd: too many arguments\n");
+        return;
+    }
+    if (argc == 1) {
+        updateLastPWD(plast_cwd, buff_cwd);
+        return;
+    }
+    string first_arg = arguments[1];
+
+    if (first_arg.compare("-") == 0) {
+        if (plast_cwd[0] == '\0') {
+            ::perror("smash error: cd: OLDPWD not set");
+            return;
+        } else {
+            if (chdir(plast_cwd) != 0) {
+                perror("smash error: chdir() failed");
+                return;
+            } else {
+                //TODO handle - logic after they answer in piazza @179
+                return;
+            }
+        }
+    }
+    if (chdir(first_arg.c_str()) != 0) {
+        perror("smash error: chdir() failed");
+        return;
+    } else {
+        updateLastPWD(plast_cwd, buff_cwd);
+    }
+}
+
+/* LISTDIR FUNCTIONS*/
+#define DIR_BUF_MAX_LENGTH (2000) //to do check piazza for actual size
+
+struct ListDirEntry{
+    string name, type;
+};
+
+bool compareNames(const ListDirEntry &a,const ListDirEntry &b){
+    return a.name<b.name;
+}
+
+void ListDirCommand::execute() {
+    char *arguments[COMMAND_MAX_LENGTH];
+    int argc = _parseCommandLine(this->commandString, arguments);
+
+    char* path=arguments[1];
+    int fd = open(path, );
+    if (fd == -1) {
+        perror("smash error: open() failed");
+        return;
+    }
+    char dirBuff[DIR_BUF_MAX_LENGTH];
+    vector<ListDirEntry> entries;
+    int position=0;
+    struct linux_dirent* d; //will not work for me
+
+}
+
+
+
+
+/** JOBS FUNCS **/
+void JobsCommand::execute() {
+   // j_list->printJobsList();
 }
