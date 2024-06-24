@@ -6,6 +6,9 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -216,12 +219,11 @@ bool compareNames(const ListDirEntry &a,const ListDirEntry &b){
 }
 
 void ListDirCommand::execute() {
-    /**
     char *arguments[COMMAND_MAX_LENGTH];
     int argc = _parseCommandLine(this->commandString, arguments);
 
     char* path=arguments[1];
-    int fd = open(path, )
+    int fd = open(path, );
     if (fd == -1) {
         perror("smash error: open() failed");
         return;
@@ -231,7 +233,6 @@ void ListDirCommand::execute() {
     int position=0;
     struct linux_dirent* d; //will not work for me
 
-**/
 }
 
 
@@ -239,5 +240,5 @@ void ListDirCommand::execute() {
 
 /** JOBS FUNCS **/
 void JobsCommand::execute() {
-    j_list->printJobsList();
+   // j_list->printJobsList();
 }
