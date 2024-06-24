@@ -228,15 +228,15 @@ typedef unordered_map<string, string> aliasMap;
 class SmallShell {
 private:
     aliasMap aliases;
+    //TODO: figure a way to print them in order (Q?)
     SmallShell();
 public:
     //why are these public?
     JobsList* jobsList;
     char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
-    char* aliases[COMMAND_MAX_LENGTH]{}; //not its final form
 
-    Command* CreateCommand(const char* cmd_line);
+    Command* CreateCommand(const char* cmd_line, int argc, char** argv);
 
     SmallShell(SmallShell const&) = delete; // disable copy ctor
     void operator=(SmallShell const&) = delete; // disable = operator

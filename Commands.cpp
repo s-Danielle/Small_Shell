@@ -84,7 +84,7 @@ void _removeBackgroundSign(char *cmd_line) {
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command *SmallShell::CreateCommand(const char *cmd_line) {
+Command *SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv) {
 
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
@@ -116,12 +116,13 @@ void SmallShell::executeCommand(char *cmd_line) {
     // for example:
     /** parse command.
      * check for '&'.
-     *
+     * split by '|', '|&', '>', '>>'
      */
     bool isBg = _isBackgroundComamnd(cmd_line);
     if(isBg){
         _removeBackgroundSign(cmd_line);
     }
+    
     char *argv[COMMAND_MAX_ARGS];
     int argc = _parseCommandLine(cmd_line, argv);
     Command* cmd = CreateCommand(cmd_line);
