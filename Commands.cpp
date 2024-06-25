@@ -26,26 +26,26 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
-string _ltrim(const std::string &s) {
+string _ltrim(const std::string& s) {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-string _rtrim(const std::string &s) {
+string _rtrim(const std::string& s) {
     size_t end = s.find_last_not_of(WHITESPACE);
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
-string _trim(const std::string &s) {
+string _trim(const std::string& s) {
     return _rtrim(_ltrim(s));
 }
 
-int _parseCommandLine(const char *cmd_line, char **args) {
+int _parseCommandLine(const char* cmd_line, char** args) {
     FUNC_ENTRY()
-    int i = 0;
+        int i = 0;
     std::istringstream iss(_trim(string(cmd_line)).c_str());
     for (std::string s; iss >> s;) {
-        args[i] = (char *) malloc(s.length() + 1);
+        args[i] = (char*) malloc(s.length() + 1);
         memset(args[i], 0, s.length() + 1);
         strcpy(args[i], s.c_str());
         args[++i] = NULL;
@@ -55,12 +55,12 @@ int _parseCommandLine(const char *cmd_line, char **args) {
     FUNC_EXIT()
 }
 
-bool _isBackgroundComamnd(const char *cmd_line) {
+bool _isBackgroundComamnd(const char* cmd_line) {
     const string str(cmd_line);
     return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
-void _removeBackgroundSign(char *cmd_line) {
+void _removeBackgroundSign(char* cmd_line) {
     const string str(cmd_line);
     // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
@@ -84,49 +84,58 @@ void _removeBackgroundSign(char *cmd_line) {
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command *SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv) {
+Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, bool isBg) {
 
-  string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-//TODO remove & and check it later so it doesnt screw up built in commands
-//also decode aliases
-  if (firstWord == "pwd") {
-    return new GetCurrDirCommand(cmd_line);
-  }
-  else if (firstWord == "showpid") {
-    return new ShowPidCommand(cmd_line);
-  }
-  else if (firstWord == "cd") {
-      return new ChangeDirCommand(cmd_line, this->last_path);
-  }
-  else if (firstWord == "chprompt") {
-      return new changePrompt(cmd_line, this->prompt_line);
-  }
-  else if (firstWord == "jobs") {
-      return new  JobsCommand(cmd_line, this->jobsList);
-  }
-  //else {
-    //return new ExternalCommand(cmd_line);
-  //}
+    //1. dealis first word
+    //2. check for alias
+    //3. check for watch
+    //4. pipe
+    //5. redirection
+    //6. built in
+    //7. external
+    string cmd_s = _trim(string(cmd_line));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    //TODO remove & and check it later so it doesnt screw up built in commands
+    //also decode aliases
+    if (firstWord == "pwd") {
+        return new GetCurrDirCommand(cmd_line);
+    }
+    else if (firstWord == "showpid") {
+        return new ShowPidCommand(cmd_line);
+    }
+    else if (firstWord == "cd") {
+        return new ChangeDirCommand(cmd_line, this->last_path);
+    }
+    else if (firstWord == "chprompt") {
+        return new changePrompt(cmd_line, this->prompt_line);
+    }
+    else if (firstWord == "jobs") {
+        return new  JobsCommand(cmd_line, this->jobsList);
+    }
+    //else {
+      //return new ExternalCommand(cmd_line);
+    //}
     return nullptr;
 }
 
-void SmallShell::executeCommand(const char *cmd_line) {
+void SmallShell::executeCommand(const char* cmd_line) {
     // TODO: Add your implementation here
     // for example:
     /** parse command.
-     * check for '&'.
-     * split by '|', '|&', '>', '>>'
+     * 
+     * 
      */
+    char cmdCopy[COMMAND_MAX_LENGTH];
+
     bool isBg = _isBackgroundComamnd(cmd_line);
-    if(isBg){
-        // _removeBackgroundSign(cmd_line);
+    if (isBg) {
+        _removeBackgroundSign(cmdCopy);
     }
-    
-    char *argv[COMMAND_MAX_ARGS];
-    int argc = _parseCommandLine(cmd_line, argv);
-    Command* cmd = CreateCommand(cmd_line);
-    if (cmd){
+    //TODO:dealis!!!!!!
+    char* argv[COMMAND_MAX_ARGS];
+    int argc = _parseCommandLine(cmdCopy, argv);
+    Command* cmd = CreateCommand(cmd_line, argc, argv, isBg);
+    if (cmd) {
         cmd->execute();
     }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
@@ -136,11 +145,11 @@ void SmallShell::executeCommand(const char *cmd_line) {
 SmallShell::SmallShell() {
     memset(last_path, 0, COMMAND_MAX_LENGTH);
     memset(prompt_line, 0, COMMAND_MAX_LENGTH);
-    ::strcpy(prompt_line,DEFAULT_PROMPT_LINE);
+    ::strcpy(prompt_line, DEFAULT_PROMPT_LINE);
 }
 
 
-void updatePrompt(const char *new_prompt, char* promptLine) {
+void updatePrompt(const char* new_prompt, char* promptLine) {
     memset(promptLine, 0, COMMAND_MAX_LENGTH);
     strcpy(promptLine, new_prompt);
 }
@@ -158,15 +167,15 @@ void GetCurrDirCommand::execute() {
 }
 void changePrompt::execute() {
 
-    char *arguments[COMMAND_MAX_LENGTH];
-    int argc= _parseCommandLine(this->commandString,arguments);
-    if (argc==1){ //reset
+    char* arguments[COMMAND_MAX_LENGTH];
+    int argc = _parseCommandLine(this->commandString, arguments);
+    if (argc == 1) { //reset
         memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
-        strcpy(pPromptLine,DEFAULT_PROMPT_LINE);
+        strcpy(pPromptLine, DEFAULT_PROMPT_LINE);
     }
     else { //we can ignore other parameters @pdf
         memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
-        strcpy(pPromptLine,arguments[1]);
+        strcpy(pPromptLine, arguments[1]);
         ::strcat(pPromptLine, "> ");
     }
 }
@@ -184,7 +193,7 @@ void updateLastPWD(char* last_pwd, char* current_pwd) {
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
     getCWD(buff_cwd);
-    char *arguments[COMMAND_MAX_LENGTH];
+    char* arguments[COMMAND_MAX_LENGTH];
     int argc = _parseCommandLine(this->commandString, arguments);
 
     if (argc > 2) {
@@ -201,11 +210,13 @@ void ChangeDirCommand::execute() {
         if (plast_cwd[0] == '\0') {
             ::perror("smash error: cd: OLDPWD not set");
             return;
-        } else {
+        }
+        else {
             if (chdir(plast_cwd) != 0) {
                 perror("smash error: chdir() failed");
                 return;
-            } else {
+            }
+            else {
                 //TODO handle - logic after they answer in piazza @179
                 return;
             }
@@ -214,7 +225,8 @@ void ChangeDirCommand::execute() {
     if (chdir(first_arg.c_str()) != 0) {
         perror("smash error: chdir() failed");
         return;
-    } else {
+    }
+    else {
         updateLastPWD(plast_cwd, buff_cwd);
     }
 }
@@ -230,14 +242,14 @@ struct linux_dirent {
 };
 
 
-void ListDirCommand::execute(){
+void ListDirCommand::execute() {
 
-} 
+}
 
 
 
 
 /** JOBS FUNCS **/
 void JobsCommand::execute() {
-   // j_list->printJobsList();
+    // j_list->printJobsList();
 }

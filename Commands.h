@@ -237,8 +237,10 @@ public:
     JobsList* jobsList;
     char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
+    pid_t currentProcess = -1;
 
-    Command* CreateCommand(const char* cmd_line, int argc, char** argv);
+
+    Command* CreateCommand(const char* cmd_line, int argc, char** argv, bool isBg);
 
     SmallShell(SmallShell const&) = delete; // disable copy ctor
     void operator=(SmallShell const&) = delete; // disable = operator
