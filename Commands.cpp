@@ -125,7 +125,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
      * 
      * 
      */
-    char cmdCopy[COMMAND_MAX_LENGTH];
+    char cmdCopy[COMMAND_MAX_LENGTH];   //TODO: complete the copy
 
     bool isBg = _isBackgroundComamnd(cmd_line);
     if (isBg) {
