@@ -31,17 +31,17 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
-string _ltrim(const std::string & s) {
+string _ltrim(const std::string& s) {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-string _rtrim(const std::string & s) {
+string _rtrim(const std::string& s) {
     size_t end = s.find_last_not_of(WHITESPACE);
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
-string _trim(const std::string & s) {
+string _trim(const std::string& s) {
     return _rtrim(_ltrim(s));
 }
 
@@ -117,7 +117,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
         return new  JobsCommand(cmd_line, this->jobsList);
     }
     else {
-      return new ExternalCommand(cmd_line, argc, argv, isBg);
+        return new ExternalCommand(cmd_line, argc, argv, isBg);
     }
     // return nullptr;
 }
@@ -129,7 +129,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
      *
      *
      */
-    char cmdCopy[COMMAND_MAX_LENGTH];   //TODO: complete the copy
+    char cmdCopy[COMMAND_MAX_LENGTH];
     memset(cmdCopy, 0, COMMAND_MAX_LENGTH);
     strcpy(cmdCopy, cmd_line);
 
@@ -139,8 +139,11 @@ void SmallShell::executeCommand(const char* cmd_line) {
     }
     //TODO:dealis!!!!!!
     char* argv[COMMAND_MAX_ARGS];
-    memset(argv, 0, COMMAND_MAX_ARGS*sizeof(argv[0]));
+    memset(argv, 0, COMMAND_MAX_ARGS * sizeof(argv[0]));
     int argc = _parseCommandLine(cmdCopy, argv);
+    if (argc == 0) {
+        return;
+    }
     Command* cmd = CreateCommand(cmd_line, argc, argv, isBg);
     if (cmd) {
         cmd->execute();
@@ -252,7 +255,7 @@ struct linux_dirent {
 void ListDirCommand::execute() {
 
 }
-
+//TODO: move these to static const class members
 #define BASH_PATH "/bin/bash"
 #define BASH_FLAG "-c"
 void ExternalCommand::execute() {
@@ -261,52 +264,59 @@ void ExternalCommand::execute() {
     //check for '&' flag (should be a field in the externalcommand class)
     //fork, execv, and wait according to logic
     //documnent running process
+    bool wildcard = false;
+    char** newargv = argv;
     if (strstr(commandString, "*") || strstr(commandString, "?")) {
         //means it has a wildcard and we need bash
         //i think the way to do it will be to modify the argv+argc
-        char* newargv[COMMAND_MAX_ARGS + 2]; //we need to address this in the dtor
-        memset(newargv, 0, (COMMAND_MAX_ARGS + 2)*sizeof(newargv[0]));
+        newargv = new char* [4];
+        string command;
+        for (int i = 0; i < argc; i++) {
+            command += argv[i];
+            if (i != argc - 1) {
+                command += " ";
+            }
+        }
         newargv[0] = BASH_PATH;
         newargv[1] = BASH_FLAG;
-        for (int i = 0; i < argc; i++) {
-            newargv[i + 2] = argv[i];
-        }
-        argv = newargv;
-        argc += 2;
+        newargv[2] = (char*) command.c_str();
+        newargv[3] = nullptr;
         wildcard = true;
     }
     pid_t processPid = fork();
+
     if (processPid < 0) {
         HANDLE_ERROR(fork);
     }
-    else if(processPid == 0){ //we are in son
-        if(setpgrp() == FAIL){
+    else if (processPid == 0) { //we are in son
+        if (setpgrp() == FAIL) {
             HANDLE_ERROR(setpgrp);
             return;
         }
-        if(execv(argv[0], argv)==FAIL){
+        if (execvp(newargv[0], (char* const*) newargv) == FAIL) {
             HANDLE_ERROR(execv);
             return;
         }
     }
-    else{   //parent
-        if(isBg){
+    else {   //parent
+        SmallShell& shell = SmallShell::getInstance();
+        if (isBg) {
             //enter to job list and return
         }
-        else{
+        else {
             //document as currenly running and wait for it to finish
-            SmallShell& shell = SmallShell::getInstance();
             shell.currentProcess = processPid;
-            if(waitpid(processPid, nullptr, 0)==FAIL){
+            if (waitpid(processPid, nullptr, 0) == FAIL) {
                 HANDLE_ERROR(waitpid);
-                // shell.currentProcess = -1;
-                // return;
             }
-            shell.currentProcess = -1;
-            return;
         }
+        if (wildcard) {
+            delete[] newargv;
+        }
+        shell.currentProcess = -1;
     }
 }
+
 
 /** JOBS FUNCS **/
 void JobsCommand::execute() {

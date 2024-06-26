@@ -36,7 +36,6 @@ public:
 
 class ExternalCommand : public Command {
     bool isBg;
-    bool wildcard = false;
 public:
     ExternalCommand(const char* cmd_line, int argc, char** argv, bool isBg): Command(cmd_line, argc, argv), isBg(isBg){};
 
