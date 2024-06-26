@@ -11,6 +11,11 @@
 #include <fcntl.h>
 #include <unordered_map>
 
+#define HANDLE_ERROR(syscall) do { \
+    perror("smash error: " #syscall " failed"); \
+} while (0)
+#define FAIL (-1)
+
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -26,17 +31,17 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
-string _ltrim(const std::string& s) {
+string _ltrim(const std::string & s) {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-string _rtrim(const std::string& s) {
+string _rtrim(const std::string & s) {
     size_t end = s.find_last_not_of(WHITESPACE);
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
-string _trim(const std::string& s) {
+string _trim(const std::string & s) {
     return _rtrim(_ltrim(s));
 }
 
@@ -93,8 +98,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
     //5. redirection
     //6. built in
     //7. external
-    string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    string firstWord = argv[0];
     //TODO remove & and check it later so it doesnt screw up built in commands
     //also decode aliases
     if (firstWord == "pwd") {
@@ -112,20 +116,22 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
     else if (firstWord == "jobs") {
         return new  JobsCommand(cmd_line, this->jobsList);
     }
-    //else {
-      //return new ExternalCommand(cmd_line);
-    //}
-    return nullptr;
+    else {
+      return new ExternalCommand(cmd_line, argc, argv, isBg);
+    }
+    // return nullptr;
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
     // TODO: Add your implementation here
     // for example:
     /** parse command.
-     * 
-     * 
+     *
+     *
      */
     char cmdCopy[COMMAND_MAX_LENGTH];   //TODO: complete the copy
+    memset(cmdCopy, 0, COMMAND_MAX_LENGTH);
+    strcpy(cmdCopy, cmd_line);
 
     bool isBg = _isBackgroundComamnd(cmd_line);
     if (isBg) {
@@ -133,6 +139,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
     }
     //TODO:dealis!!!!!!
     char* argv[COMMAND_MAX_ARGS];
+    memset(argv, 0, COMMAND_MAX_ARGS*sizeof(argv[0]));
     int argc = _parseCommandLine(cmdCopy, argv);
     Command* cmd = CreateCommand(cmd_line, argc, argv, isBg);
     if (cmd) {
@@ -246,13 +253,59 @@ void ListDirCommand::execute() {
 
 }
 
-
-void ExternalCommand::execute(){
+#define BASH_PATH "/bin/bash"
+#define BASH_FLAG "-c"
+void ExternalCommand::execute() {
     //assume cmd is parsed
     //check for '*', '?'
     //check for '&' flag (should be a field in the externalcommand class)
     //fork, execv, and wait according to logic
     //documnent running process
+    if (strstr(commandString, "*") || strstr(commandString, "?")) {
+        //means it has a wildcard and we need bash
+        //i think the way to do it will be to modify the argv+argc
+        char* newargv[COMMAND_MAX_ARGS + 2]; //we need to address this in the dtor
+        memset(newargv, 0, (COMMAND_MAX_ARGS + 2)*sizeof(newargv[0]));
+        newargv[0] = BASH_PATH;
+        newargv[1] = BASH_FLAG;
+        for (int i = 0; i < argc; i++) {
+            newargv[i + 2] = argv[i];
+        }
+        argv = newargv;
+        argc += 2;
+        wildcard = true;
+    }
+    pid_t processPid = fork();
+    if (processPid < 0) {
+        HANDLE_ERROR(fork);
+    }
+    else if(processPid == 0){ //we are in son
+        if(setpgrp() == FAIL){
+            HANDLE_ERROR(setpgrp);
+            return;
+        }
+        if(execv(argv[0], argv)==FAIL){
+            HANDLE_ERROR(execv);
+            return;
+        }
+    }
+    else{   //parent
+        if(isBg){
+            //enter to job list and return
+        }
+        else{
+            //document as currenly running and wait for it to finish
+            SmallShell& shell = SmallShell::getInstance();
+            shell.currentProcess = processPid;
+            if(waitpid(processPid, nullptr, 0)==FAIL){
+                HANDLE_ERROR(waitpid);
+                // shell.currentProcess = -1;
+                // return;
+            }
+            shell.currentProcess = -1;
+            return;
+        }
+    }
 }
 
 /** JOBS FUNCS **/

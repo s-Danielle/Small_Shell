@@ -2,18 +2,19 @@
 #define SMASH_COMMAND_H_
 
 #include <map>
+#include <unordered_map>
 #include <cstring>
 
 #define COMMAND_MAX_LENGTH (200)
-#define COMMAND_MAX_ARGS (20)
+#define COMMAND_MAX_ARGS (21)
 #define DEFAULT_PROMPT_LINE ("smash> ")
 class Command {
     // TODO: Add your data members
+public:
     int argc;
     char ** argv;
-public:
     char commandString[COMMAND_MAX_LENGTH];
-    Command(const char* cmd_line, int argc, char** argv) {
+    Command(const char* cmd_line, int argc, char** argv):argc(argc), argv(argv) {
         memset(this->commandString, 0, COMMAND_MAX_LENGTH);
         strcpy(this->commandString, cmd_line);
     };
@@ -28,14 +29,16 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmdLine, int argc, char** argv) : Command(cmdLine, argc, argv) {};
+    BuiltInCommand(const char* cmdLine, int argc=0, char** argv=nullptr) : Command(cmdLine, argc, argv) {};//TODO: remove default values
 
     virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
+    bool isBg;
+    bool wildcard = false;
 public:
-    ExternalCommand(const char* cmd_line, int argc, char** argv);
+    ExternalCommand(const char* cmd_line, int argc, char** argv, bool isBg): Command(cmd_line, argc, argv), isBg(isBg){};
 
     virtual ~ExternalCommand() {}
 
@@ -47,7 +50,7 @@ class PipeCommand : public Command {
     Command* in;
     Command* out;
 public:
-    PipeCommand(const char* cmd_line, int argc, char** argv);
+    PipeCommand(const char** cmd_line);
 
     virtual ~PipeCommand() {}
 
@@ -124,7 +127,7 @@ public:
         JobEntry(int id, pid_t pid, char* str) : id(id), pid(pid) { strcpy(cmd_str, str); }
         ~JobEntry() = default;
     };
-    map<int ,JobEntry*> entries;
+    std::map<int ,JobEntry*> entries;
 
 public:
     JobsList();
@@ -226,7 +229,7 @@ public:
     void execute() override;
 };
 
-typedef unordered_map<string, string> aliasMap;
+typedef std::unordered_map<std::string, std::string> aliasMap;
 class SmallShell {
 private:
     aliasMap aliases;
