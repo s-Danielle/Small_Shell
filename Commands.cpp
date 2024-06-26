@@ -345,6 +345,16 @@ void JobsList::addJob(Command* cmd, pid_t pid) {
     JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
     entries[maxJobID + 1] = newEntry;
 }
+void JobsList::printJobsList() {
+}
+
+void JobsList::killAllJobs() {
+    for (auto it = entries.begin(); it != entries.end(); it++) {
+        if (kill(it->second->pid, SIGKILL) == FAIL) {
+            HANDLE_ERROR(kill);
+        }
+    }
+}
 
 void JobsList::removeFinishedJobs() {
     for (auto it = entries.begin(); it != entries.end(); it++) {
@@ -353,4 +363,15 @@ void JobsList::removeFinishedJobs() {
             entries.erase(it);
         }
     }
+}
+
+JobsList::JobEntry* JobsList::getJobById(int jobId) {
+    return entries[jobId];
+    //TODO: add error handling
+}
+
+void JobsList::removeJobById(int jobId) {
+    //TODO: add error handling
+    delete entries[jobId];
+    entries.erase(jobId);
 }
