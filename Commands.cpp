@@ -114,7 +114,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
         return new changePrompt(cmd_line, this->prompt_line);
     }
     else if (firstWord == "jobs") {
-        return new  JobsCommand(cmd_line, this->jobsList);
+        return new JobsCommand(cmd_line);
     }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
@@ -279,7 +279,7 @@ void ExternalCommand::execute() {
         }
         newargv[0] = BASH_PATH;
         newargv[1] = BASH_FLAG;
-        newargv[2] = (char*) command.c_str();
+        newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing
         newargv[3] = nullptr;
         wildcard = true;
     }
@@ -293,7 +293,7 @@ void ExternalCommand::execute() {
             HANDLE_ERROR(setpgrp);
             return;
         }
-        if (execvp(newargv[0], (char* const*) newargv) == FAIL) {
+        if (execvp(newargv[0], newargv) == FAIL) {
             HANDLE_ERROR(execv);
             return;
         }
@@ -302,6 +302,8 @@ void ExternalCommand::execute() {
         SmallShell& shell = SmallShell::getInstance();
         if (isBg) {
             //enter to job list and return
+            shell.jobsList.removeFinishedJobs();    //is this needed?
+            shell.jobsList.addJob(this, processPid);
         }
         else {
             //document as currenly running and wait for it to finish
@@ -319,6 +321,36 @@ void ExternalCommand::execute() {
 
 
 /** JOBS FUNCS **/
+
 void JobsCommand::execute() {
     // j_list->printJobsList();
+}
+
+// JOBS LIST
+bool JobsList::JobEntry::isFinished() {
+    int status;
+    int ret = waitpid(pid, &status, WNOHANG);
+    if (ret == FAIL) {
+        HANDLE_ERROR(waitpid);
+        return false;
+    }
+    else if (ret == 0) {
+        return false;
+    }
+    return true;
+}
+
+void JobsList::addJob(Command* cmd, pid_t pid) {
+    int maxJobID = entries.rbegin()->first;
+    JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
+    entries[maxJobID + 1] = newEntry;
+}
+
+void JobsList::removeFinishedJobs() {
+    for (auto it = entries.begin(); it != entries.end(); it++) {
+        if (it->second->isFinished()) {
+            delete it->second;
+            entries.erase(it);
+        }
+    }
 }

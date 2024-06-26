@@ -12,9 +12,9 @@ class Command {
     // TODO: Add your data members
 public:
     int argc;
-    char ** argv;
+    char** argv;
     char commandString[COMMAND_MAX_LENGTH];
-    Command(const char* cmd_line, int argc, char** argv):argc(argc), argv(argv) {
+    Command(const char* cmd_line, int argc, char** argv) :argc(argc), argv(argv) {
         memset(this->commandString, 0, COMMAND_MAX_LENGTH);
         strcpy(this->commandString, cmd_line);
     };
@@ -29,7 +29,7 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmdLine, int argc=0, char** argv=nullptr) : Command(cmdLine, argc, argv) {};//TODO: remove default values
+    BuiltInCommand(const char* cmdLine, int argc = 0, char** argv = nullptr) : Command(cmdLine, argc, argv) {};//TODO: remove default values
 
     virtual ~BuiltInCommand() {}
 };
@@ -37,7 +37,7 @@ public:
 class ExternalCommand : public Command {
     bool isBg;
 public:
-    ExternalCommand(const char* cmd_line, int argc, char** argv, bool isBg): Command(cmd_line, argc, argv), isBg(isBg){};
+    ExternalCommand(const char* cmd_line, int argc, char** argv, bool isBg) : Command(cmd_line, argc, argv), isBg(isBg) {};
 
     virtual ~ExternalCommand() {}
 
@@ -120,20 +120,22 @@ class QuitCommand : public BuiltInCommand {
 class JobsList {
 public:
     class JobEntry {
+    public:
         int id;
         pid_t pid;
         char cmd_str[COMMAND_MAX_LENGTH];
-        JobEntry(int id, pid_t pid, char* str) : id(id), pid(pid) { strcpy(cmd_str, str); }
+        JobEntry(int id, pid_t pid, const char* str) : id(id), pid(pid) { strcpy(cmd_str, str); }
         ~JobEntry() = default;
+        bool isFinished();
     };
-    std::map<int ,JobEntry*> entries;
+    std::map<int, JobEntry*> entries;
 
 public:
-    JobsList();
+    JobsList() = default;
 
-    ~JobsList();
+    ~JobsList() = default;
 
-    void addJob(Command* cmd, bool isStopped = false);
+    void addJob(Command* cmd, pid_t pid);
 
     void printJobsList();
 
@@ -145,16 +147,15 @@ public:
 
     void removeJobById(int jobId);
 
-    JobEntry* getLastJob(int* lastJobId);
+    // JobEntry* getLastJob(int* lastJobId);
 
-    JobEntry* getLastStoppedJob(int* jobId);
+    // JobEntry* getLastStoppedJob(int* jobId);
     // TODO: Add extra methods or modify existing ones as needed
 };
 
 class JobsCommand : public BuiltInCommand {
-    JobsList* j_list;
 public:
-    JobsCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), j_list(jobs) {}
+    JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
 
     virtual ~JobsCommand() = default;
 
@@ -236,7 +237,7 @@ private:
     SmallShell();
 public:
     //why are these public?
-    JobsList* jobsList;
+    JobsList jobsList;
     char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
     pid_t currentProcess = -1;
