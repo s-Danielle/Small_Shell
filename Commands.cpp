@@ -247,7 +247,13 @@ void ListDirCommand::execute() {
 }
 
 
-
+void ExternalCommand::execute(){
+    //assume cmd is parsed
+    //check for '*', '?'
+    //check for '&' flag (should be a field in the externalcommand class)
+    //fork, execv, and wait according to logic
+    //documnent running process
+}
 
 /** JOBS FUNCS **/
 void JobsCommand::execute() {

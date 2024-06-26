@@ -9,11 +9,11 @@
 #define DEFAULT_PROMPT_LINE ("smash> ")
 class Command {
     // TODO: Add your data members
-    //int argc;
-    // char ** argv;
+    int argc;
+    char ** argv;
 public:
     char commandString[COMMAND_MAX_LENGTH];
-    Command(const char* cmd_line) {
+    Command(const char* cmd_line, int argc, char** argv) {
         memset(this->commandString, 0, COMMAND_MAX_LENGTH);
         strcpy(this->commandString, cmd_line);
     };
@@ -28,14 +28,14 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char* cmdLine) : Command(cmdLine) {};
+    BuiltInCommand(const char* cmdLine, int argc, char** argv) : Command(cmdLine, argc, argv) {};
 
     virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
 public:
-    ExternalCommand(const char* cmd_line);
+    ExternalCommand(const char* cmd_line, int argc, char** argv);
 
     virtual ~ExternalCommand() {}
 
@@ -47,7 +47,7 @@ class PipeCommand : public Command {
     Command* in;
     Command* out;
 public:
-    PipeCommand(const char* cmd_line);
+    PipeCommand(const char* cmd_line, int argc, char** argv);
 
     virtual ~PipeCommand() {}
 
