@@ -268,7 +268,6 @@ void ExternalCommand::execute() {
     char** newargv = argv;
     if (strstr(commandString, "*") || strstr(commandString, "?")) {
         //means it has a wildcard and we need bash
-        //i think the way to do it will be to modify the argv+argc
         newargv = new char* [4];
         string command;
         for (int i = 0; i < argc; i++) {
@@ -348,6 +347,9 @@ void JobsList::addJob(Command* cmd, pid_t pid) {
     entries[maxJobID + 1] = newEntry;
 }
 void JobsList::printJobsList() {
+    for (auto it = entries.begin(); it != entries.end(); it++) {
+        cout << "[" << it->first << "] " << it->second->cmd_str << endl;
+    }
 }
 
 void JobsList::killAllJobs() {
@@ -369,15 +371,16 @@ void JobsList::removeFinishedJobs() {
 //**returns nullptr if theres no job with jobId */
 JobsList::JobEntry* JobsList::getJobById(int jobId) {
     auto it = entries.find(jobId);
-    if(it != entries.end()){
+    if (it != entries.end()) {
         return it->second;
-    } else {
+    }
+    else {
         return nullptr;
     }
 }
 
 void JobsList::removeJobById(int jobId) {
-    if(entries.find(jobId) == entries.end()){
+    if (entries.find(jobId) == entries.end()) {
         return;
     }
     delete entries[jobId];
