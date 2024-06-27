@@ -153,6 +153,8 @@ public:
 
     void removeJobById(int jobId);
 
+    void bringJobToForeground(int jobId = -1);
+
     // JobEntry* getLastJob(int* lastJobId);
 
     // JobEntry* getLastStoppedJob(int* jobId);

@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unordered_map>
+#include <cassert>
 
 #define HANDLE_ERROR(syscall) do { \
     perror("smash error: " #syscall " failed"); \
@@ -58,6 +59,24 @@ int _parseCommandLine(const char* cmd_line, char** args) {
     return i;
 
     FUNC_EXIT()
+}
+
+int stringToInt(const string& str) {
+    try {
+        size_t pos;
+        int result = stoi(str, &pos);
+
+        // Check if the entire string was converted
+        if (pos != str.size()) {
+            return -1; 
+        }
+
+        return result;
+    } catch (const invalid_argument& e) {
+        return -1;
+    } catch (const out_of_range& e) {
+        return -1;
+    }
 }
 
 bool _isBackgroundComamnd(const char* cmd_line) {
@@ -165,7 +184,7 @@ void updatePrompt(const char* new_prompt, char* promptLine) {
     memset(promptLine, 0, COMMAND_MAX_LENGTH);
     strcpy(promptLine, new_prompt);
 }
-
+//TODO: is COMMAND_MAX_LENGTH the buffersize we need here?
 void getCWD(char* buff) {
     if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
         perror("smash error: getcwd() failed");
@@ -208,6 +227,27 @@ void QuitCommand::execute() {
     }
     //TODO: handle kill
     exit(0);
+}
+void ForegroundCommand::execute() {
+    SmallShell& shell = SmallShell::getInstance();
+    if(argc == 1){//no job id
+        if(shell.jobsList.entries.empty()){
+            cerr << "smash error: fg: jobs list is empty" << endl;
+            return;
+        }
+        shell.jobsList.bringJobToForeground(-1);
+    }else{
+        int jobId = stringToInt(argv[1]);
+        if(shell.jobsList.getJobById(jobId) == nullptr){
+            cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
+            return;
+        }
+        if(jobId == -1 || argc > 2){
+            cerr << "smash error: fg: invalid arguments" << endl;
+            return;
+        }
+        shell.jobsList.bringJobToForeground(jobId);
+    }
 }
 
 void ChangeDirCommand::execute() {
@@ -355,7 +395,7 @@ bool JobsList::JobEntry::isFinished() {
 }
 
 void JobsList::addJob(Command* cmd, pid_t pid) {
-    int maxJobID = entries.rbegin()->first;
+    int maxJobID =entries.empty() ? 1: entries.rbegin()->first;
     JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
     entries[maxJobID + 1] = newEntry;
 }
@@ -366,18 +406,22 @@ void JobsList::printJobsList() {
 }
 
 void JobsList::killAllJobs() {
-    for (auto it = entries.begin(); it != entries.end(); it++) {
+    for (auto it = entries.begin(); it != entries.end();) {
         if (kill(it->second->pid, SIGKILL) == FAIL) {
             HANDLE_ERROR(kill);
+            //what to do if kill fails? do we still remove the job?
         }
+        it = entries.erase(it);
     }
 }
 
 void JobsList::removeFinishedJobs() {
-    for (auto it = entries.begin(); it != entries.end(); it++) {
+    for (auto it = entries.begin(); it != entries.end();) {
         if (it->second->isFinished()) {
             delete it->second;
-            entries.erase(it);
+            it = entries.erase(it);
+        }else{
+            it++;
         }
     }
 }
@@ -393,9 +437,17 @@ JobsList::JobEntry* JobsList::getJobById(int jobId) {
 }
 
 void JobsList::removeJobById(int jobId) {
-    if (entries.find(jobId) == entries.end()) {
+    if (!entries.count(jobId)) {
         return;
     }
     delete entries[jobId];
     entries.erase(jobId);
+}
+
+void JobsList::bringJobToForeground(int jobId) {
+    assert(entries.count(jobId));
+    JobEntry* job;
+    if (jobId == -1) {
+        job = entries.rbegin()->second;
+    }
 }
