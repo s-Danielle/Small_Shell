@@ -4,6 +4,8 @@
 #include <map>
 #include <unordered_map>
 #include <cstring>
+#include <list>
+#include <unordered_set>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
@@ -272,5 +274,34 @@ public:
     // TODO: add extra methods as needed
 
 };
+
+/* ALIAS */
+
+using namespace std;
+class Aliases {
+private:
+   // static const regex aliases_pattern;
+    map<string,string> aliases_map;
+    list <string> alias_list;
+    unordered_set<string> saved_words;
+
+public:
+    Aliases();
+    bool addAlias(const char* cmd_line); //returns false if exists or reserved
+    bool removeAlias(string &key);
+    bool isAliasOrReseved(string &key);
+    static bool isLegalAliasFormat(const char* cmd_line);
+    static bool isLegalAliasFormat(const string& cmd_line);
+    void printAliases();
+    bool parseAliasCommand(const char* cmd_line, string* key, string* value);
+    void deAlias(char *p_cmd_line);
+};
+
+
+
+
+
+
+
 
 #endif //SMASH_COMMAND_H_
