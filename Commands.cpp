@@ -292,7 +292,7 @@ void ExternalCommand::execute() {
     }
     pid_t processPid = fork();
 
-    if (processPid < 0) {
+    if (processPid < 0) {   //fork failed
         HANDLE_ERROR(fork);
     }
     else if (processPid == 0) { //we are in son
@@ -318,11 +318,12 @@ void ExternalCommand::execute() {
             if (waitpid(processPid, nullptr, 0) == FAIL) {
                 HANDLE_ERROR(waitpid);
             }
+
+            if (wildcard) {
+                delete[] newargv;
+            }
+            shell.currentProcess = -1;
         }
-        if (wildcard) {
-            delete[] newargv;
-        }
-        shell.currentProcess = -1;
     }
 }
 
