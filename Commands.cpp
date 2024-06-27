@@ -120,9 +120,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     //6. built in
     //7. external
     string firstWord = argv[0];
-    //TODO remove & and check it later so it doesnt screw up built in commands
-    //also decode aliases
-    if (firstWord == "pwd") {
+    if(strchr(cmdCopy, '|') != nullptr){
+        //if cmdCopy contains '|' then we have a pipe   
+    }else if(strchr(cmdCopy, '>') != nullptr){
+        //if cmdCopy contains '>' then we have a redirection
+    }
+    else if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord == "showpid") {
@@ -251,6 +254,7 @@ void QuitCommand::execute() {
     if (isKill) {
         SmallShell& shell = SmallShell::getInstance();
         //TODO: figure out printing
+        shell.jobsList.removeFinishedJobs();
         shell.jobsList.killAllJobs();
         exit(0);
     }
@@ -319,6 +323,14 @@ void ChangeDirCommand::execute() {
         updateLastPWD(plast_cwd, buff_cwd);
     }
 }
+/** execute pipe commands */
+void PipeCommand::execute() {
+    //two ready to go commands
+    //create pipe
+    //fork
+    //connect pipe
+    //excute each command
+}
 
 /* LISTDIR FUNCTIONS*/
 #define BUFF_SIZE (2048)
@@ -345,7 +357,7 @@ void ExternalCommand::execute() {
     //documnent running process
     bool wildcard = false;
     char** newargv = argv;
-    if (strstr(commandString, "*") || strstr(commandString, "?")) {
+    if (strchr(commandString, '*') || strchr(commandString, '?')) {
         //means it has a wildcard and we need bash
         newargv = new char* [4];
         string command;
