@@ -115,6 +115,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
     }
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line);
+    }else if (firstWord == "quit"){
+        return new QuitCommand(cmd_line, argc, argv);
     }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
@@ -282,6 +284,8 @@ void ExternalCommand::execute() {
             command += argv[i];
             if (i != argc - 1) {
                 command += " ";
+            } else {
+                command += ";exit";
             }
         }
         newargv[0] = BASH_PATH;
