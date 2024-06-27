@@ -139,7 +139,11 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, argc, argv);
-    }
+    }else if (firstWord == "alias") {
+        return new aliasCommand(cmd_line, argc, argv);
+    }else if (firstWord == "unalias") {
+    return new unaliasCommand(cmd_line, argc, argv);
+}
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
     }
@@ -147,10 +151,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
-    //TODO:dealis!!!!!!
+
+
     char cmdCopy[COMMAND_MAX_LENGTH];
     memset(cmdCopy, 0, COMMAND_MAX_LENGTH);
     strcpy(cmdCopy, cmd_line);
+    aliases.deAlias(cmdCopy);
 
     bool isBg = _isBackgroundComamnd(cmd_line);
     if (isBg) {
@@ -209,7 +215,7 @@ void changePrompt::execute() {
 }
 
 void ShowPidCommand::execute() {
-    std::cout << "smash pid is " << getppid() << endl; //stays smash even with chprompt @54
+    std::cout << "smash pid is " << getpid() << endl; //stays smash even with chprompt @54, getpid cannot fail
 }
 
 void updateLastPWD(char* last_pwd, char* current_pwd) {
@@ -289,7 +295,7 @@ void ChangeDirCommand::execute() {
         }
         else {
             if (chdir(plast_cwd) != 0) {
-                perror("smash error: chdir() failed");
+                perror("smash error: chdir failed");
                 return;
             }
             else {
@@ -299,7 +305,7 @@ void ChangeDirCommand::execute() {
         }
     }
     if (chdir(first_arg.c_str()) != 0) {
-        perror("smash error: chdir() failed");
+        perror("smash error: chdir failed");
         return;
     }
     else {
@@ -323,14 +329,36 @@ void ListDirCommand::execute() {
 }
 
 void aliasCommand::execute() {
+    SmallShell &smash=SmallShell::getInstance();
+    if (argc==1) {
+        smash.aliases.printAliases();
+        return;
+    }
+    if(!Aliases::isLegalAliasFormat(commandString)) {
+        perror("smsh error: alias: invalid alias format");
+        return;
+    }
+    string key, value;
+    Aliases::parseAliasCommand(commandString,&key,&value);
 
-
-
-
+    if (!smash.aliases.addAlias(commandString)) {
+        string err_buff="smash error: alias " + key + " already exists or is a reserved word";
+        perror(err_buff.c_str());
+    }
 }
 
-
-
+void unaliasCommand::execute() {
+    if (argc==1) {
+        perror("smash error: unalias: not enough arguments");
+        return;
+    }
+    SmallShell &smash=SmallShell::getInstance();
+    string key=_trim(argv[1]);
+    if (!smash.aliases.removeAlias(key)){
+        string err_buf = "smash error: unalias: " +key+ " alias does not exist";
+        perror(err_buf.c_str());
+    }
+}
 
 
 //TODO: move these to static const class members
@@ -357,6 +385,13 @@ void ExternalCommand::execute() {
                 command += ";exit";
             }
         }
+
+        //char c_BASH_PATH[]="/bin/bash\0";
+        //char c_BASH_FLAG[] ="-c\0";
+        //the following two lines wont compile for me
+        //(ISO C++ wont allow string to char* convertions)
+        //idk why but leave this here  for me until resolved for easy fix thank you :)
+
         newargv[0] = BASH_PATH;
         newargv[1] = BASH_FLAG;
         newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing
@@ -514,19 +549,20 @@ bool Aliases::isLegalAliasFormat(const string& cmd_line) {
     return true; // regex_match(cmd_line,Aliases::aliases_pattern);
 }
 
-void Aliases::deAlias(char *p_cmd_line) {
-    string cmd_str=p_cmd_line;
-    size_t first_ws_pos=cmd_str.find(' ');
-    string first_word;
-    if (first_ws_pos!=string::npos) {
-        first_word=cmd_str.substr(0,first_ws_pos);
-    } else {
-        first_word=cmd_str;
-    }
+void Aliases::deAlias(char cmd_line[COMMAND_MAX_LENGTH]) {
+    string dealiased_str=cmd_line;
+
+    size_t first_ws_pos=dealiased_str.find_first_of(WHITESPACE);
+    string first_word=dealiased_str.substr(0,first_ws_pos);
     auto it=aliases_map.find(first_word);
     if (it!=aliases_map.end()) {
-        cmd_str=it->second + cmd_str.substr(first_ws_pos);
-        strncpy(p_cmd_line, cmd_str.c_str(), 200); //todo change to define
+        if (first_word==cmd_line) {
+            dealiased_str=it->second;
+        }else {
+            dealiased_str=it->second + dealiased_str.substr(first_ws_pos);
+        }
+        memset(cmd_line, 0, COMMAND_MAX_LENGTH);
+        strcpy(cmd_line,dealiased_str.c_str());
     }
 
 }
@@ -536,7 +572,6 @@ bool Aliases::addAlias(const char* cmd_line) {
     string key, value;
     parseAliasCommand(cmd_line, &key, &value);
     if (isAliasOrReseved(key)) {
-        cout <<"nope cant use that key"<<endl;
         return false;
     }
     aliases_map[key]=value;
