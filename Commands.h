@@ -284,7 +284,6 @@ private:
     map<string,string> aliases_map;
     list <string> alias_list;
     unordered_set<string> saved_words;
-
 public:
     Aliases();
     bool addAlias(const char* cmd_line); //returns false if exists or reserved

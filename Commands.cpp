@@ -321,6 +321,18 @@ struct linux_dirent {
 void ListDirCommand::execute() {
 
 }
+
+void aliasCommand::execute() {
+
+
+
+
+}
+
+
+
+
+
 //TODO: move these to static const class members
 #define BASH_PATH "/bin/bash"
 #define BASH_FLAG "-c"
@@ -477,4 +489,99 @@ void JobsList::bringJobToForeground(int jobId) {
     if (waitpid(job->pid, nullptr, 0) == FAIL) {
         HANDLE_ERROR(waitpid);
     }
+}
+
+
+
+
+
+/* ALIAS */
+
+Aliases::Aliases() {
+    saved_words={"chprompt", "showpid", "pwd", "cd", "jobs", "fg", "quit",
+                    "kill", "alias", "unalias", "listdir", "getuser", "watch"};
+};
+
+bool Aliases::isLegalAliasFormat(const char *cmd_line) {
+    //todo
+    //string cmd_str=cmd_line;
+ //   return regex_match(cmd_str,Aliases::aliases_pattern);
+    return true;
+}
+
+bool Aliases::isLegalAliasFormat(const string& cmd_line) {
+    //todo
+    return true; // regex_match(cmd_line,Aliases::aliases_pattern);
+}
+
+void Aliases::deAlias(char *p_cmd_line) {
+    string cmd_str=p_cmd_line;
+    size_t first_ws_pos=cmd_str.find(' ');
+    string first_word;
+    if (first_ws_pos!=string::npos) {
+        first_word=cmd_str.substr(0,first_ws_pos);
+    } else {
+        first_word=cmd_str;
+    }
+    auto it=aliases_map.find(first_word);
+    if (it!=aliases_map.end()) {
+        cmd_str=it->second + cmd_str.substr(first_ws_pos);
+        strncpy(p_cmd_line, cmd_str.c_str(), 200); //todo change to define
+    }
+
+}
+
+bool Aliases::addAlias(const char* cmd_line) {
+    assert(isLegalAliasFormat(cmd_line));
+    string key, value;
+    parseAliasCommand(cmd_line, &key, &value);
+    if (isAliasOrReseved(key)) {
+        cout <<"nope cant use that key"<<endl;
+        return false;
+    }
+    aliases_map[key]=value;
+    alias_list.push_back(key);
+    return true;
+}
+bool Aliases::isAliasOrReseved(string &key) {
+    return (aliases_map.find(key)!=aliases_map.end() || saved_words.find(key)!=saved_words.end());
+}
+
+
+bool Aliases::removeAlias(string &key) {
+    auto it = aliases_map.find(key);
+    if(it==aliases_map.end()) {
+        return false;
+    }
+    aliases_map.erase(it);
+    alias_list.remove(key);
+    return true;
+}
+
+void Aliases::printAliases() {
+    if (aliases_map.empty()) {
+        return;
+    }
+    for(auto &key : alias_list) {
+        std::cout << key << "='" << aliases_map.at(key) << "'"<<endl;
+    }
+
+}
+
+bool Aliases::parseAliasCommand(const char *cmd_line, string *key, string *value) {
+    string trimmed= _trim(string(cmd_line));
+    size_t key_begin_pos=trimmed.find_first_of(WHITESPACE);//should be after the word aliases
+    key_begin_pos=trimmed.find_first_not_of(WHITESPACE, key_begin_pos);
+    size_t key_end_pos= trimmed.find("=");
+    size_t value_begin_pos=trimmed.find_first_of("'")+1;
+    size_t value_end_pos=trimmed.find_last_of("'");
+    if(key_begin_pos==trimmed.npos || key_end_pos==trimmed.npos
+        || value_begin_pos==trimmed.npos || value_end_pos== trimmed.npos) {
+        return false;
+    }
+    *key=trimmed.substr(key_begin_pos,key_end_pos-key_begin_pos);
+    *key=_trim(*key);
+    *value=trimmed.substr(value_begin_pos,value_end_pos-value_begin_pos);
+    *value=_trim(*value);
+    return true;
 }
