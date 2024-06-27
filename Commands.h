@@ -110,7 +110,13 @@ class JobsList;
 
 class QuitCommand : public BuiltInCommand {
     // TODO: Add your data members public:
-    QuitCommand(const char* cmd_line, JobsList* jobs);
+    bool isKill = false;
+    public:
+    QuitCommand(const char* cmd_line, int argc, char** argv): BuiltInCommand(cmd_line, argc, argv) {
+        if (argc > 1 && strcmp(argv[1], "kill") == 0) {
+            isKill = true;
+        }
+    };
 
     virtual ~QuitCommand() {}
 

@@ -199,6 +199,14 @@ void updateLastPWD(char* last_pwd, char* current_pwd) {
     strcpy(last_pwd, current_pwd);
 }
 
+void QuitCommand::execute() {
+    if (isKill) {
+        SmallShell& shell = SmallShell::getInstance();
+        shell.jobsList.killAllJobs();
+    }
+    //TODO: handle kill
+    exit(0);
+}
 
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
@@ -301,7 +309,7 @@ void ExternalCommand::execute() {
         SmallShell& shell = SmallShell::getInstance();
         if (isBg) {
             //enter to job list and return
-            shell.jobsList.removeFinishedJobs();    //is this needed?
+            shell.jobsList.removeFinishedJobs();    //is this needed? yes!
             shell.jobsList.addJob(this, processPid);
         }
         else {
