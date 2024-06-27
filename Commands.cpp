@@ -10,6 +10,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unordered_map>
+#include <cassert>
+
+#define HANDLE_ERROR(syscall) do { \
+    perror("smash error: " #syscall " failed"); \
+} while (0)
+#define FAIL (-1)
 
 using namespace std;
 
@@ -55,6 +61,26 @@ int _parseCommandLine(const char* cmd_line, char** args) {
     FUNC_EXIT()
 }
 
+int stringToInt(const string& str) {
+    try {
+        size_t pos;
+        int result = stoi(str, &pos);
+
+        // Check if the entire string was converted
+        if (pos != str.size()) {
+            return -1;
+        }
+
+        return result;
+    }
+    catch (const invalid_argument& e) {
+        return -1;
+    }
+    catch (const out_of_range& e) {
+        return -1;
+    }
+}
+
 bool _isBackgroundComamnd(const char* cmd_line) {
     const string str(cmd_line);
     return str[str.find_last_not_of(WHITESPACE)] == '&';
@@ -84,7 +110,7 @@ void _removeBackgroundSign(char* cmd_line) {
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, bool isBg) {
+Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv, bool isBg) {
 
     //1. dealis first word
     //2. check for alias
@@ -93,8 +119,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
     //5. redirection
     //6. built in
     //7. external
-    string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    string firstWord = argv[0];
     //TODO remove & and check it later so it doesnt screw up built in commands
     //also decode aliases
     if (firstWord == "pwd") {
@@ -110,31 +135,34 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
         return new changePrompt(cmd_line, this->prompt_line);
     }
     else if (firstWord == "jobs") {
-        return new  JobsCommand(cmd_line, this->jobsList);
+        return new JobsCommand(cmd_line);
     }
-    //else {
-      //return new ExternalCommand(cmd_line);
-    //}
-    return nullptr;
+    else if (firstWord == "quit") {
+        return new QuitCommand(cmd_line, argc, argv);
+    }
+    else {
+        return new ExternalCommand(cmd_line, argc, argv, isBg);
+    }
+    // return nullptr;
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
-    // TODO: Add your implementation here
-    // for example:
-    /** parse command.
-     * 
-     * 
-     */
-    char cmdCopy[COMMAND_MAX_LENGTH];   //TODO: complete the copy
+    //TODO:dealis!!!!!!
+    char cmdCopy[COMMAND_MAX_LENGTH];
+    memset(cmdCopy, 0, COMMAND_MAX_LENGTH);
+    strcpy(cmdCopy, cmd_line);
 
     bool isBg = _isBackgroundComamnd(cmd_line);
     if (isBg) {
         _removeBackgroundSign(cmdCopy);
     }
-    //TODO:dealis!!!!!!
     char* argv[COMMAND_MAX_ARGS];
+    memset(argv, 0, COMMAND_MAX_ARGS * sizeof(argv[0]));
     int argc = _parseCommandLine(cmdCopy, argv);
-    Command* cmd = CreateCommand(cmd_line, argc, argv, isBg);
+    if (argc == 0) {
+        return;
+    }
+    Command* cmd = CreateCommand(cmd_line, cmdCopy, argc, argv, isBg);
     if (cmd) {
         cmd->execute();
     }
@@ -153,7 +181,7 @@ void updatePrompt(const char* new_prompt, char* promptLine) {
     memset(promptLine, 0, COMMAND_MAX_LENGTH);
     strcpy(promptLine, new_prompt);
 }
-
+//TODO: is COMMAND_MAX_LENGTH the buffersize we need here?
 void getCWD(char* buff) {
     if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
         perror("smash error: getcwd() failed");
@@ -189,6 +217,54 @@ void updateLastPWD(char* last_pwd, char* current_pwd) {
     strcpy(last_pwd, current_pwd);
 }
 
+void KillCommand::execute() {
+    SmallShell& shell = SmallShell::getInstance();
+    if (argc < 3) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+    if (shell.jobsList.getJobById(stringToInt(argv[2])) == nullptr) {
+        cerr << "smash error: kill: job-id " << argv[2] << " does not exist" << endl;
+        return;
+    }
+    if (argv[1][0] != '-') {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+}
+
+void QuitCommand::execute() {
+    if (isKill) {
+        SmallShell& shell = SmallShell::getInstance();
+        //TODO: figure out printing
+        shell.jobsList.killAllJobs();
+        exit(0);
+    }
+    //TODO: handle kill
+    exit(0);
+}
+void ForegroundCommand::execute() {
+    SmallShell& shell = SmallShell::getInstance();
+    if (argc == 1) {//no job id
+        if (shell.jobsList.entries.empty()) {
+            cerr << "smash error: fg: jobs list is empty" << endl;
+            return;
+        }
+        shell.jobsList.bringJobToForeground(-1);
+    }
+    else {
+        int jobId = stringToInt(argv[1]);
+        if (shell.jobsList.getJobById(jobId) == nullptr) {
+            cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
+            return;
+        }
+        if (jobId == -1 || argc > 2) {
+            cerr << "smash error: fg: invalid arguments" << endl;
+            return;
+        }
+        shell.jobsList.bringJobToForeground(jobId);
+    }
+}
 
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
@@ -245,17 +321,160 @@ struct linux_dirent {
 void ListDirCommand::execute() {
 
 }
-
-
-void ExternalCommand::execute(){
+//TODO: move these to static const class members
+#define BASH_PATH "/bin/bash"
+#define BASH_FLAG "-c"
+void ExternalCommand::execute() {
     //assume cmd is parsed
     //check for '*', '?'
     //check for '&' flag (should be a field in the externalcommand class)
     //fork, execv, and wait according to logic
     //documnent running process
+    bool wildcard = false;
+    char** newargv = argv;
+    if (strstr(commandString, "*") || strstr(commandString, "?")) {
+        //means it has a wildcard and we need bash
+        newargv = new char* [4];
+        string command;
+        for (int i = 0; i < argc; i++) {
+            command += argv[i];
+            if (i != argc - 1) {
+                command += " ";
+            }
+            else {
+                command += ";exit";
+            }
+        }
+        newargv[0] = BASH_PATH;
+        newargv[1] = BASH_FLAG;
+        newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing
+        newargv[3] = nullptr;
+        wildcard = true;
+    }
+    pid_t processPid = fork();
+
+    if (processPid < 0) {   //fork failed
+        HANDLE_ERROR(fork);
+    }
+    else if (processPid == 0) { //we are in son
+        if (setpgrp() == FAIL) {
+            HANDLE_ERROR(setpgrp);
+            return;
+        }
+        if (execvp(newargv[0], newargv) == FAIL) {
+            HANDLE_ERROR(execv);
+            return;
+        }
+    }
+    else {   //parent
+        SmallShell& shell = SmallShell::getInstance();
+        if (isBg) {
+            //enter to job list and return
+            shell.jobsList.removeFinishedJobs();    //is this needed? yes!
+            shell.jobsList.addJob(this, processPid);
+        }
+        else {
+            //document as currenly running and wait for it to finish
+            shell.currentProcess = processPid;
+            if (waitpid(processPid, nullptr, 0) == FAIL) {
+                HANDLE_ERROR(waitpid);
+            }
+
+            if (wildcard) {
+                delete[] newargv;
+            }
+            shell.currentProcess = -1;
+        }
+    }
 }
 
+
 /** JOBS FUNCS **/
+
 void JobsCommand::execute() {
-    // j_list->printJobsList();
+    SmallShell& shell = SmallShell::getInstance();
+    shell.jobsList.removeFinishedJobs();
+    shell.jobsList.printJobsList();
+}
+
+// JOBS LIST
+bool JobsList::JobEntry::isFinished() {
+    int status;
+    int ret = waitpid(pid, &status, WNOHANG);
+    if (ret == FAIL) {
+        HANDLE_ERROR(waitpid);
+        return false;
+    }
+    else if (ret == 0) {
+        return false;
+    }
+    return true;
+}
+
+void JobsList::addJob(Command* cmd, pid_t pid) {
+    int maxJobID = entries.empty() ? 1 : entries.rbegin()->first;
+    JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
+    entries[maxJobID + 1] = newEntry;
+}
+void JobsList::printJobsList() {
+    for (auto it = entries.begin(); it != entries.end(); it++) {
+        cout << "[" << it->first << "] " << it->second->cmd_str << endl;
+    }
+}
+
+void JobsList::killAllJobs() {
+    for (auto it = entries.begin(); it != entries.end();) {
+        if (kill(it->second->pid, SIGKILL) == FAIL) {
+            HANDLE_ERROR(kill);
+            //what to do if kill fails? do we still remove the job?
+        }
+        it = entries.erase(it);
+    }
+}
+
+void JobsList::removeFinishedJobs() {
+    for (auto it = entries.begin(); it != entries.end();) {
+        if (it->second->isFinished()) {
+            delete it->second;
+            it = entries.erase(it);
+        }
+        else {
+            it++;
+        }
+    }
+}
+//**returns nullptr if theres no job with jobId */
+JobsList::JobEntry* JobsList::getJobById(int jobId) {
+    auto it = entries.find(jobId);
+    if (it != entries.end()) {
+        return it->second;
+    }
+    else {
+        return nullptr;
+    }
+}
+
+void JobsList::removeJobById(int jobId) {
+    if (!entries.count(jobId)) {
+        return;
+    }
+    delete entries[jobId];
+    entries.erase(jobId);
+}
+
+void JobsList::bringJobToForeground(int jobId) {
+    assert(entries.count(jobId) || jobId == -1); //we shouldnt get here if the job doesnt exist
+    JobEntry* job;
+    if (jobId == -1) {
+        job = entries.rbegin()->second;
+    }
+    else {
+        job = entries[jobId];
+    }
+    SmallShell& shell = SmallShell::getInstance();
+    shell.jobsList.removeJobById(job->id);
+    shell.currentProcess = job->pid;
+    if (waitpid(job->pid, nullptr, 0) == FAIL) {
+        HANDLE_ERROR(waitpid);
+    }
 }
