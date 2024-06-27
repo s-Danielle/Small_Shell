@@ -323,7 +323,9 @@ void ExternalCommand::execute() {
 /** JOBS FUNCS **/
 
 void JobsCommand::execute() {
-    // j_list->printJobsList();
+    SmallShell& shell = SmallShell::getInstance();
+    shell.jobsList.removeFinishedJobs();
+    shell.jobsList.printJobsList();
 }
 
 // JOBS LIST
@@ -364,14 +366,20 @@ void JobsList::removeFinishedJobs() {
         }
     }
 }
-
+//**returns nullptr if theres no job with jobId */
 JobsList::JobEntry* JobsList::getJobById(int jobId) {
-    return entries[jobId];
-    //TODO: add error handling
+    auto it = entries.find(jobId);
+    if(it != entries.end()){
+        return it->second;
+    } else {
+        return nullptr;
+    }
 }
 
 void JobsList::removeJobById(int jobId) {
-    //TODO: add error handling
+    if(entries.find(jobId) == entries.end()){
+        return;
+    }
     delete entries[jobId];
     entries.erase(jobId);
 }
