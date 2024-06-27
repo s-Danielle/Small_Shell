@@ -68,13 +68,15 @@ int stringToInt(const string& str) {
 
         // Check if the entire string was converted
         if (pos != str.size()) {
-            return -1; 
+            return -1;
         }
 
         return result;
-    } catch (const invalid_argument& e) {
+    }
+    catch (const invalid_argument& e) {
         return -1;
-    } catch (const out_of_range& e) {
+    }
+    catch (const out_of_range& e) {
         return -1;
     }
 }
@@ -134,7 +136,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line);
-    }else if (firstWord == "quit"){
+    }
+    else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, argc, argv);
     }
     else {
@@ -214,9 +217,26 @@ void updateLastPWD(char* last_pwd, char* current_pwd) {
     strcpy(last_pwd, current_pwd);
 }
 
+void KillCommand::execute() {
+    SmallShell& shell = SmallShell::getInstance();
+    if (argc < 3) {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+    if (shell.jobsList.getJobById(stringToInt(argv[2])) == nullptr) {
+        cerr << "smash error: kill: job-id " << argv[2] << " does not exist" << endl;
+        return;
+    }
+    if (argv[1][0] != '-') {
+        cerr << "smash error: kill: invalid arguments" << endl;
+        return;
+    }
+}
+
 void QuitCommand::execute() {
     if (isKill) {
         SmallShell& shell = SmallShell::getInstance();
+        //TODO: figure out printing
         shell.jobsList.killAllJobs();
         exit(0);
     }
@@ -225,19 +245,20 @@ void QuitCommand::execute() {
 }
 void ForegroundCommand::execute() {
     SmallShell& shell = SmallShell::getInstance();
-    if(argc == 1){//no job id
-        if(shell.jobsList.entries.empty()){
+    if (argc == 1) {//no job id
+        if (shell.jobsList.entries.empty()) {
             cerr << "smash error: fg: jobs list is empty" << endl;
             return;
         }
         shell.jobsList.bringJobToForeground(-1);
-    }else{
+    }
+    else {
         int jobId = stringToInt(argv[1]);
-        if(shell.jobsList.getJobById(jobId) == nullptr){
+        if (shell.jobsList.getJobById(jobId) == nullptr) {
             cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
             return;
         }
-        if(jobId == -1 || argc > 2){
+        if (jobId == -1 || argc > 2) {
             cerr << "smash error: fg: invalid arguments" << endl;
             return;
         }
@@ -319,7 +340,8 @@ void ExternalCommand::execute() {
             command += argv[i];
             if (i != argc - 1) {
                 command += " ";
-            } else {
+            }
+            else {
                 command += ";exit";
             }
         }
@@ -390,7 +412,7 @@ bool JobsList::JobEntry::isFinished() {
 }
 
 void JobsList::addJob(Command* cmd, pid_t pid) {
-    int maxJobID =entries.empty() ? 1: entries.rbegin()->first;
+    int maxJobID = entries.empty() ? 1 : entries.rbegin()->first;
     JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
     entries[maxJobID + 1] = newEntry;
 }
@@ -415,7 +437,8 @@ void JobsList::removeFinishedJobs() {
         if (it->second->isFinished()) {
             delete it->second;
             it = entries.erase(it);
-        }else{
+        }
+        else {
             it++;
         }
     }
@@ -444,13 +467,14 @@ void JobsList::bringJobToForeground(int jobId) {
     JobEntry* job;
     if (jobId == -1) {
         job = entries.rbegin()->second;
-    }else{
+    }
+    else {
         job = entries[jobId];
     }
     SmallShell& shell = SmallShell::getInstance();
     shell.jobsList.removeJobById(job->id);
     shell.currentProcess = job->pid;
-    if(waitpid(job->pid, nullptr, 0) == FAIL){
+    if (waitpid(job->pid, nullptr, 0) == FAIL) {
         HANDLE_ERROR(waitpid);
     }
 }
