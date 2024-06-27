@@ -108,7 +108,7 @@ void _removeBackgroundSign(char* cmd_line) {
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, bool isBg) {
+Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv, bool isBg) {
 
     //1. dealis first word
     //2. check for alias
@@ -144,12 +144,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, int argc, char** argv, 
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
-    // TODO: Add your implementation here
-    // for example:
-    /** parse command.
-     *
-     *
-     */
+    //TODO:dealis!!!!!!
     char cmdCopy[COMMAND_MAX_LENGTH];
     memset(cmdCopy, 0, COMMAND_MAX_LENGTH);
     strcpy(cmdCopy, cmd_line);
@@ -158,14 +153,13 @@ void SmallShell::executeCommand(const char* cmd_line) {
     if (isBg) {
         _removeBackgroundSign(cmdCopy);
     }
-    //TODO:dealis!!!!!!
     char* argv[COMMAND_MAX_ARGS];
     memset(argv, 0, COMMAND_MAX_ARGS * sizeof(argv[0]));
     int argc = _parseCommandLine(cmdCopy, argv);
     if (argc == 0) {
         return;
     }
-    Command* cmd = CreateCommand(cmd_line, argc, argv, isBg);
+    Command* cmd = CreateCommand(cmd_line, cmdCopy, argc, argv, isBg);
     if (cmd) {
         cmd->execute();
     }
@@ -224,6 +218,7 @@ void QuitCommand::execute() {
     if (isKill) {
         SmallShell& shell = SmallShell::getInstance();
         shell.jobsList.killAllJobs();
+        exit(0);
     }
     //TODO: handle kill
     exit(0);
@@ -445,9 +440,17 @@ void JobsList::removeJobById(int jobId) {
 }
 
 void JobsList::bringJobToForeground(int jobId) {
-    assert(entries.count(jobId));
+    assert(entries.count(jobId) || jobId == -1); //we shouldnt get here if the job doesnt exist
     JobEntry* job;
     if (jobId == -1) {
         job = entries.rbegin()->second;
+    }else{
+        job = entries[jobId];
+    }
+    SmallShell& shell = SmallShell::getInstance();
+    shell.jobsList.removeJobById(job->id);
+    shell.currentProcess = job->pid;
+    if(waitpid(job->pid, nullptr, 0) == FAIL){
+        HANDLE_ERROR(waitpid);
     }
 }

@@ -19,7 +19,11 @@ public:
         strcpy(this->commandString, cmd_line);
     };
 
-    virtual ~Command() = default;
+    virtual ~Command(){
+        for(int i = 0; i < argc; i++){
+            delete[] argv[i];
+        }
+    }; //we need to free memory here (argv)
 
     virtual void execute() = 0;
     //virtual void prepare();
@@ -251,7 +255,7 @@ public:
     pid_t currentProcess = -1;
 
 
-    Command* CreateCommand(const char* cmd_line, int argc, char** argv, bool isBg);
+    Command* CreateCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv, bool isBg);
 
     SmallShell(SmallShell const&) = delete; // disable copy ctor
     void operator=(SmallShell const&) = delete; // disable = operator
