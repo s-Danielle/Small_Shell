@@ -140,6 +140,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, argc, argv);
     }
+    else if (firstWord == "kill") {
+        return new KillCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "fg") {
+        return new ForegroundCommand(cmd_line, argc, argv);
+    }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
     }
@@ -231,6 +237,14 @@ void KillCommand::execute() {
         cerr << "smash error: kill: invalid arguments" << endl;
         return;
     }
+    int signal = stringToInt(argv[1] + 1); //skip the '-'
+    //send signal to process
+    if (kill(shell.jobsList.getJobById(stringToInt(argv[2]))->pid, signal) == FAIL) {
+        HANDLE_ERROR(kill);
+        return;
+    }
+    //print according to pdf
+    cout << "signal number " << signal << " was sent to pid " << shell.jobsList.getJobById(stringToInt(argv[2]))->pid << endl;
 }
 
 void QuitCommand::execute() {
@@ -294,7 +308,6 @@ void ChangeDirCommand::execute() {
             }
             else {
                 //TODO handle - logic after they answer in piazza @179
-                return;
             }
         }
     }
@@ -412,7 +425,7 @@ bool JobsList::JobEntry::isFinished() {
 }
 
 void JobsList::addJob(Command* cmd, pid_t pid) {
-    int maxJobID = entries.empty() ? 1 : entries.rbegin()->first;
+    int maxJobID = entries.empty() ? 0 : entries.rbegin()->first;
     JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
     entries[maxJobID + 1] = newEntry;
 }
@@ -423,7 +436,9 @@ void JobsList::printJobsList() {
 }
 
 void JobsList::killAllJobs() {
+    cout << "smash: sending SIGKILL signal to " << entries.size() << " jobs:" << endl;
     for (auto it = entries.begin(); it != entries.end();) {
+        cout << it->second->pid << ": " << it->second->cmd_str << endl;
         if (kill(it->second->pid, SIGKILL) == FAIL) {
             HANDLE_ERROR(kill);
             //what to do if kill fails? do we still remove the job?
