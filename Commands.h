@@ -22,8 +22,8 @@ public:
         strcpy(this->commandString, cmd_line);
     };
 
-    virtual ~Command(){
-        for(int i = 0; i < argc; i++){
+    virtual ~Command() {
+        for (int i = 0; i < argc; i++) {
             delete[] argv[i];
         }
     }; //we need to free memory here (argv)
@@ -55,8 +55,19 @@ class PipeCommand : public Command {
     // TODO: Add your data members
     Command* in;
     Command* out;
+    char inCmd[COMMAND_MAX_LENGTH];
+    char outCmd[COMMAND_MAX_LENGTH];
+    char* cmdCopy; //WILL be messed with
+    bool pipeToErr;
 public:
-    PipeCommand(const char** cmd_line);
+    PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line[0], argc, argv) {
+        char* delimiter = strchr(cmdCopy, '|');
+        pipeToErr = (*(delimiter + 1) == '&');
+        *delimiter = '\0';
+        in = SmallShell::getInstance().CreateCommand(cmdCopy, cmdCopy, argc, argv, false);
+        char *outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
+        out = SmallShell::getInstance().CreateCommand(outCmd, outCmd, argc, argv, false);
+    };
 
     virtual ~PipeCommand() {}
 
@@ -75,8 +86,11 @@ public:
 
 class RedirectionCommand : public Command {
     // TODO: Add your data members
+    Command* in;
+    Command* out;
+    char* cmdCopy; //WILL be messed with
 public:
-    explicit RedirectionCommand(const char* cmd_line);
+    explicit RedirectionCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv);
 
     virtual ~RedirectionCommand() {}
 
@@ -118,8 +132,8 @@ class JobsList;
 class QuitCommand : public BuiltInCommand {
     // TODO: Add your data members public:
     bool isKill = false;
-    public:
-    QuitCommand(const char* cmd_line, int argc, char** argv): BuiltInCommand(cmd_line, argc, argv) {
+public:
+    QuitCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {
         if (argc > 1 && strcmp(argv[1], "kill") == 0) {
             isKill = true;
         }
@@ -170,7 +184,7 @@ public:
 
 class JobsCommand : public BuiltInCommand {
 public:
-    JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
+    JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
 
     virtual ~JobsCommand() = default;
 
@@ -180,7 +194,7 @@ public:
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
-    KillCommand(const char* cmd_line, JobsList* jobs);
+    KillCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {};
 
     virtual ~KillCommand() {}
 
@@ -190,7 +204,7 @@ public:
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
-    ForegroundCommand(const char* cmd_line, JobsList* jobs);
+    ForegroundCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {};
 
     virtual ~ForegroundCommand() {}
 
