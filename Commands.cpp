@@ -13,6 +13,10 @@
 #include <cassert>
 #include <regex>
 
+
+#include <dirent.h>
+#include <sys/syscall.h>
+
 #define HANDLE_ERROR(syscall) do { \
     perror("smash error: " #syscall " failed"); \
 } while (0)
@@ -166,6 +170,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "fg") {
         return new ForegroundCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "listdir") {
+        return new ListDirCommand(cmd_line, argc, argv);
     }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
@@ -423,9 +430,73 @@ struct linux_dirent {
     unsigned short d_reclen; // Length of this linux_dirent
     char           d_name[]; // Filename (null-terminated)
 };
+struct DirEntry {
+    string name;
+    bool isDir;
+};
 
+bool DirEntCmp1(const DirEntry& a, const DirEntry& b) {
+    if (a.isDir != b.isDir) {
+        return !a.isDir; //trust the logic
+    }
+    return a.name > b.name;
+}
 
+void sortDirEntryVector(vector<DirEntry>& entries) {
+    sort(entries.begin(),entries.end(),DirEntCmp1);
+}
+
+void printDirEntryVector(vector<DirEntry>& entries) {
+    for (auto entry : entries) {
+        string type= entry.isDir ? "directory: " : "file: ";
+        cout << type << entry.name << endl;
+    }
+}
 void ListDirCommand::execute() {
+    if (argc>2) {
+        perror("smash: listdir: too many arguments");
+        return;
+    }
+    string folder_path;
+    if (argc>1) {
+        folder_path= argv[1];
+    }else {
+        char buff[COMMAND_MAX_LENGTH];
+        getCWD(buff);
+        if (!buff){
+            HANDLE_ERROR("getcwd");
+        };
+        folder_path=buff;
+    }
+    char dir_buff[DIR_BUFF_SIZE];
+    linux_dirent *dirent;
+    int file_descriptor=open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
+    if(file_descriptor==-1) {
+        perror("smash error: open failed");
+        return;
+    }
+    ssize_t b_read;
+    vector<DirEntry> dir_entries;
+    while (1) {
+        b_read=syscall(SYS_getdents,file_descriptor, dir_buff, DIR_BUFF_SIZE);
+        if(b_read==0) {
+            break;
+        }
+        if (b_read==-1) {
+            perror("smash error: getdents failed");
+            return;
+        }
+        for (int bpos=0; bpos<b_read;) {
+            dirent=(linux_dirent*)(dir_buff+bpos);
+            bpos+=dirent->d_reclen;
+            char dir_type= *(dir_buff + bpos + dirent->d_reclen - 1);
+            if(dir_type==DT_REG || dir_type==DT_DIR) {
+                dir_entries.push_back({string(dirent->d_name), dir_type==DT_DIR});
+            }
+        }
+    }
+    sortDirEntryVector(dir_entries);
+    printDirEntryVector(dir_entries);
 
 }
 

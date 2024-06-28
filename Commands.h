@@ -6,11 +6,11 @@
 #include <cstring>
 #include <list>
 #include <unordered_set>
-
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
 #define DEFAULT_PROMPT_LINE ("smash> ")
 #define NO_PROCESS_RUNNING (-1)
+#define DIR_BUFF_SIZE (4096)
 
 class Command {
     // TODO: Add your data members
@@ -214,7 +214,7 @@ public:
 
 class ListDirCommand : public BuiltInCommand {
 public:
-    ListDirCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
+    ListDirCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {};
 
     virtual ~ListDirCommand() = default;
 
