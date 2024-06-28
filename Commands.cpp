@@ -120,9 +120,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     //6. built in
     //7. external
     string firstWord = argv[0];
-    //TODO remove & and check it later so it doesnt screw up built in commands
-    //also decode aliases
-    if (firstWord == "pwd") {
+    if(strchr(cmdCopy, '|') != nullptr){
+        //if cmdCopy contains '|' then we have a pipe   
+    }else if(strchr(cmdCopy, '>') != nullptr){
+        //if cmdCopy contains '>' then we have a redirection
+    }
+    else if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord == "showpid") {
@@ -139,6 +142,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "kill") {
+        return new KillCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "fg") {
+        return new ForegroundCommand(cmd_line, argc, argv);
     }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
@@ -231,12 +240,21 @@ void KillCommand::execute() {
         cerr << "smash error: kill: invalid arguments" << endl;
         return;
     }
+    int signal = stringToInt(argv[1] + 1); //skip the '-'
+    //send signal to process
+    if (kill(shell.jobsList.getJobById(stringToInt(argv[2]))->pid, signal) == FAIL) {
+        HANDLE_ERROR(kill);
+        return;
+    }
+    //print according to pdf
+    cout << "signal number " << signal << " was sent to pid " << shell.jobsList.getJobById(stringToInt(argv[2]))->pid << endl;
 }
 
 void QuitCommand::execute() {
     if (isKill) {
         SmallShell& shell = SmallShell::getInstance();
         //TODO: figure out printing
+        shell.jobsList.removeFinishedJobs();
         shell.jobsList.killAllJobs();
         exit(0);
     }
@@ -294,7 +312,6 @@ void ChangeDirCommand::execute() {
             }
             else {
                 //TODO handle - logic after they answer in piazza @179
-                return;
             }
         }
     }
@@ -305,6 +322,14 @@ void ChangeDirCommand::execute() {
     else {
         updateLastPWD(plast_cwd, buff_cwd);
     }
+}
+/** execute pipe commands */
+void PipeCommand::execute() {
+    //two ready to go commands
+    //create pipe
+    //fork
+    //connect pipe
+    //excute each command
 }
 
 /* LISTDIR FUNCTIONS*/
@@ -332,7 +357,7 @@ void ExternalCommand::execute() {
     //documnent running process
     bool wildcard = false;
     char** newargv = argv;
-    if (strstr(commandString, "*") || strstr(commandString, "?")) {
+    if (strchr(commandString, '*') || strchr(commandString, '?')) {
         //means it has a wildcard and we need bash
         newargv = new char* [4];
         string command;
@@ -412,7 +437,7 @@ bool JobsList::JobEntry::isFinished() {
 }
 
 void JobsList::addJob(Command* cmd, pid_t pid) {
-    int maxJobID = entries.empty() ? 1 : entries.rbegin()->first;
+    int maxJobID = entries.empty() ? 0 : entries.rbegin()->first;
     JobEntry* newEntry = new JobEntry(maxJobID + 1, pid, cmd->commandString);
     entries[maxJobID + 1] = newEntry;
 }
@@ -423,7 +448,9 @@ void JobsList::printJobsList() {
 }
 
 void JobsList::killAllJobs() {
+    cout << "smash: sending SIGKILL signal to " << entries.size() << " jobs:" << endl;
     for (auto it = entries.begin(); it != entries.end();) {
+        cout << it->second->pid << ": " << it->second->cmd_str << endl;
         if (kill(it->second->pid, SIGKILL) == FAIL) {
             HANDLE_ERROR(kill);
             //what to do if kill fails? do we still remove the job?
