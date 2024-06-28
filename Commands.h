@@ -267,18 +267,18 @@ public:
 class Aliases {
 private:
     // static const regex aliases_pattern;
-    map<string,string> aliases_map;
-    list <string> alias_list;
-    unordered_set<string> saved_words;
+    map<std::string,std::string> aliases_map;
+    list <std::string> alias_list;
+    unordered_set<std::string> saved_words;
 public:
     Aliases();
     bool addAlias(const char* cmd_line); //returns false if exists or reserved
-    bool removeAlias(string &key);
-    bool isAliasOrReseved(string &key);
+    bool removeAlias(std::string &key);
+    bool isAliasOrReseved(std::string &key);
     static bool isLegalAliasFormat(const char* cmd_line);
-    static bool isLegalAliasFormat(const string& cmd_line);
+    static bool isLegalAliasFormat(const std::string& cmd_line);
     void printAliases();
-    static bool parseAliasCommand(const char* cmd_line, string* key, string* value);
+    static bool parseAliasCommand(const char* cmd_line, std::string* key, std::string* value);
     void deAlias(char *cmd_line);
 };
 

@@ -156,7 +156,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
     }
-    // return nullptr;
+    return nullptr; //TODO: handle this case
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
