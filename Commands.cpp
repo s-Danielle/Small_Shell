@@ -11,6 +11,8 @@
 #include <fcntl.h>
 #include <unordered_map>
 #include <cassert>
+#include <bits/regex.h>
+#include <bits/regex_constants.h>
 
 #define HANDLE_ERROR(syscall) do { \
     perror("smash error: " #syscall " failed"); \
@@ -633,22 +635,20 @@ void JobsList::bringJobToForeground(int jobId) {
 
 
 /* ALIAS */
+std::regex pattern("^alias [a-zA-Z0-9_]+='[^']*'$"); // Regex pattern for matching alias commands
 
 Aliases::Aliases() {
     saved_words = { "chprompt", "showpid", "pwd", "cd", "jobs", "fg", "quit",
                     "kill", "alias", "unalias", "listdir", "getuser", "watch" };
+
 };
 
 bool Aliases::isLegalAliasFormat(const char* cmd_line) {
-    //todo
-    //string cmd_str=cmd_line;
- //   return regex_match(cmd_str,Aliases::aliases_pattern);
-    return true;
+    return std::regex_match(cmd_line,pattern);
 }
 
 bool Aliases::isLegalAliasFormat(const string& cmd_line) {
-    //todo
-    return true; // regex_match(cmd_line,Aliases::aliases_pattern);
+    return regex_match(cmd_line,pattern);
 }
 
 void Aliases::deAlias(char cmd_line[COMMAND_MAX_LENGTH]) {
