@@ -11,6 +11,8 @@
 #define COMMAND_MAX_ARGS (21)
 #define DEFAULT_PROMPT_LINE ("smash> ")
 #define NO_PROCESS_RUNNING (-1)
+
+class SmallShell;
 class Command {
     // TODO: Add your data members
 public:
@@ -60,14 +62,7 @@ class PipeCommand : public Command {
     char* cmdCopy; //WILL be messed with
     bool pipeToErr;
 public:
-    PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line[0], argc, argv) {
-        char* delimiter = strchr(cmdCopy, '|');
-        pipeToErr = (*(delimiter + 1) == '&');
-        *delimiter = '\0';
-        in = SmallShell::getInstance().CreateCommand(cmdCopy, cmdCopy, argc, argv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
-        char *outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
-        out = SmallShell::getInstance().CreateCommand(outCmd, outCmd, argc, argv, false);
-    };
+    PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv); 
 
     virtual ~PipeCommand() {
         delete in;
@@ -267,9 +262,9 @@ public:
 class Aliases {
 private:
     // static const regex aliases_pattern;
-    map<std::string,std::string> aliases_map;
-    list <std::string> alias_list;
-    unordered_set<std::string> saved_words;
+    std::map<std::string,std::string> aliases_map;
+    std::list <std::string> alias_list;
+    std::unordered_set<std::string> saved_words;
 public:
     Aliases();
     bool addAlias(const char* cmd_line); //returns false if exists or reserved
@@ -289,7 +284,7 @@ public:
     //why are these public? //because I can
     JobsList jobsList;
     Aliases aliases;
-    char prompt_line[COMMAND_MAX_LENGTH];
+    char prompt_line[COMMAND_MAX_LENGTH]  = DEFAULT_PROMPT_LINE;
     char last_path[COMMAND_MAX_LENGTH];
     pid_t currentProcess = NO_PROCESS_RUNNING;
     pid_t pipedProcess = NO_PROCESS_RUNNING; //will hold the pid of the process that is piped to

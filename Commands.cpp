@@ -104,7 +104,16 @@ void _removeBackgroundSign(char* cmd_line) {
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h 
+//moved it here to avoid circular dependency
+PipeCommand::PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line[0], argc, argv) {
+    char* delimiter = strchr(cmdCopy, '|');
+    pipeToErr = (*(delimiter + 1) == '&');
+    *delimiter = '\0';
+    SmallShell& shell = SmallShell::getInstance();
+    in = shell.CreateCommand(cmdCopy, cmdCopy, argc, argv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
+    char* outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
+    out = shell.CreateCommand(outCmd, outCmd, argc, argv, false);
+};
 
 
 /**
@@ -120,9 +129,10 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     //6. built in
     //7. external
     string firstWord = argv[0];
-    if(strchr(cmdCopy, '|') != nullptr){
+    if (strchr(cmdCopy, '|') != nullptr) {
         //if cmdCopy contains '|' then we have a pipe   
-    }else if(strchr(cmdCopy, '>') != nullptr){
+    }
+    else if (strchr(cmdCopy, '>') != nullptr) {
         //if cmdCopy contains '>' then we have a redirection
     }
     else if (firstWord == "pwd") {
@@ -142,10 +152,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, argc, argv);
-    }else if (firstWord == "alias") {
+    }
+    else if (firstWord == "alias") {
         return new aliasCommand(cmd_line, argc, argv);
-    }else if (firstWord == "unalias") {
-    return new unaliasCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "unalias") {
+        return new unaliasCommand(cmd_line, argc, argv);
     }
     else if (firstWord == "kill") {
         return new KillCommand(cmd_line, argc, argv);
@@ -348,7 +360,7 @@ void PipeCommand::execute() {
         //close the read side
         close(pipefd[0]);
         //redirect output to pipe
-        int output  = pipeToErr ? STDERR_FILENO : STDOUT_FILENO;
+        int output = pipeToErr ? STDERR_FILENO : STDOUT_FILENO;
         //redirect output to pipe
         if (dup2(pipefd[1], output) == FAIL) {
             HANDLE_ERROR(dup2);
@@ -376,7 +388,8 @@ void PipeCommand::execute() {
         }
         out->execute(); //TODO: better error handling
         close(pipefd[0]);
-    }else {
+    }
+    else {
         //parent
         close(pipefd[0]);
         close(pipefd[1]);
@@ -414,33 +427,33 @@ void ListDirCommand::execute() {
 }
 
 void aliasCommand::execute() {
-    SmallShell &smash=SmallShell::getInstance();
-    if (argc==1) {
+    SmallShell& smash = SmallShell::getInstance();
+    if (argc == 1) {
         smash.aliases.printAliases();
         return;
     }
-    if(!Aliases::isLegalAliasFormat(commandString)) {
+    if (!Aliases::isLegalAliasFormat(commandString)) {
         perror("smsh error: alias: invalid alias format");
         return;
     }
     string key, value;
-    Aliases::parseAliasCommand(commandString,&key,&value);
+    Aliases::parseAliasCommand(commandString, &key, &value);
 
     if (!smash.aliases.addAlias(commandString)) {
-        string err_buff="smash error: alias " + key + " already exists or is a reserved word";
+        string err_buff = "smash error: alias " + key + " already exists or is a reserved word";
         perror(err_buff.c_str());
     }
 }
 
 void unaliasCommand::execute() {
-    if (argc==1) {
+    if (argc == 1) {
         perror("smash error: unalias: not enough arguments");
         return;
     }
-    SmallShell &smash=SmallShell::getInstance();
-    string key=_trim(argv[1]);
-    if (!smash.aliases.removeAlias(key)){
-        string err_buf = "smash error: unalias: " +key+ " alias does not exist";
+    SmallShell& smash = SmallShell::getInstance();
+    string key = _trim(argv[1]);
+    if (!smash.aliases.removeAlias(key)) {
+        string err_buf = "smash error: unalias: " + key + " alias does not exist";
         perror(err_buf.c_str());
     }
 }
@@ -622,11 +635,11 @@ void JobsList::bringJobToForeground(int jobId) {
 /* ALIAS */
 
 Aliases::Aliases() {
-    saved_words={"chprompt", "showpid", "pwd", "cd", "jobs", "fg", "quit",
-                    "kill", "alias", "unalias", "listdir", "getuser", "watch"};
+    saved_words = { "chprompt", "showpid", "pwd", "cd", "jobs", "fg", "quit",
+                    "kill", "alias", "unalias", "listdir", "getuser", "watch" };
 };
 
-bool Aliases::isLegalAliasFormat(const char *cmd_line) {
+bool Aliases::isLegalAliasFormat(const char* cmd_line) {
     //todo
     //string cmd_str=cmd_line;
  //   return regex_match(cmd_str,Aliases::aliases_pattern);
@@ -639,19 +652,20 @@ bool Aliases::isLegalAliasFormat(const string& cmd_line) {
 }
 
 void Aliases::deAlias(char cmd_line[COMMAND_MAX_LENGTH]) {
-    string dealiased_str=cmd_line;
+    string dealiased_str = cmd_line;
 
-    size_t first_ws_pos=dealiased_str.find_first_of(WHITESPACE);
-    string first_word=dealiased_str.substr(0,first_ws_pos);
-    auto it=aliases_map.find(first_word);
-    if (it!=aliases_map.end()) {
-        if (first_word==cmd_line) {
-            dealiased_str=it->second;
-        }else {
-            dealiased_str=it->second + dealiased_str.substr(first_ws_pos);
+    size_t first_ws_pos = dealiased_str.find_first_of(WHITESPACE);
+    string first_word = dealiased_str.substr(0, first_ws_pos);
+    auto it = aliases_map.find(first_word);
+    if (it != aliases_map.end()) {
+        if (first_word == cmd_line) {
+            dealiased_str = it->second;
+        }        
+else {
+            dealiased_str = it->second + dealiased_str.substr(first_ws_pos);
         }
         memset(cmd_line, 0, COMMAND_MAX_LENGTH);
-        strcpy(cmd_line,dealiased_str.c_str());
+        strcpy(cmd_line, dealiased_str.c_str());
     }
 
 }
@@ -663,18 +677,18 @@ bool Aliases::addAlias(const char* cmd_line) {
     if (isAliasOrReseved(key)) {
         return false;
     }
-    aliases_map[key]=value;
+    aliases_map[key] = value;
     alias_list.push_back(key);
     return true;
 }
-bool Aliases::isAliasOrReseved(string &key) {
-    return (aliases_map.find(key)!=aliases_map.end() || saved_words.find(key)!=saved_words.end());
+bool Aliases::isAliasOrReseved(string& key) {
+    return (aliases_map.find(key) != aliases_map.end() || saved_words.find(key) != saved_words.end());
 }
 
 
-bool Aliases::removeAlias(string &key) {
+bool Aliases::removeAlias(string& key) {
     auto it = aliases_map.find(key);
-    if(it==aliases_map.end()) {
+    if (it == aliases_map.end()) {
         return false;
     }
     aliases_map.erase(it);
@@ -686,27 +700,27 @@ void Aliases::printAliases() {
     if (aliases_map.empty()) {
         return;
     }
-    for(auto &key : alias_list) {
-        std::cout << key << "='" << aliases_map.at(key) << "'"<<endl;
+    for (auto& key : alias_list) {
+        std::cout << key << "='" << aliases_map.at(key) << "'" << endl;
     }
 
 }
 
-bool Aliases::parseAliasCommand(const char *cmd_line, string *key, string *value) {
-    string trimmed= _trim(string(cmd_line));
-    size_t key_begin_pos=trimmed.find_first_of(WHITESPACE);//should be after the word aliases
-    key_begin_pos=trimmed.find_first_not_of(WHITESPACE, key_begin_pos);
-    size_t key_end_pos= trimmed.find("=");
-    size_t value_begin_pos=trimmed.find_first_of("'")+1;
-    size_t value_end_pos=trimmed.find_last_of("'");
-    if(key_begin_pos==trimmed.npos || key_end_pos==trimmed.npos
-        || value_begin_pos==trimmed.npos || value_end_pos== trimmed.npos) {
+bool Aliases::parseAliasCommand(const char* cmd_line, string* key, string* value) {
+    string trimmed = _trim(string(cmd_line));
+    size_t key_begin_pos = trimmed.find_first_of(WHITESPACE);//should be after the word aliases
+    key_begin_pos = trimmed.find_first_not_of(WHITESPACE, key_begin_pos);
+    size_t key_end_pos = trimmed.find("=");
+    size_t value_begin_pos = trimmed.find_first_of("'") + 1;
+    size_t value_end_pos = trimmed.find_last_of("'");
+    if (key_begin_pos == trimmed.npos || key_end_pos == trimmed.npos
+        || value_begin_pos == trimmed.npos || value_end_pos == trimmed.npos) {
         return false;
     }
-    *key=trimmed.substr(key_begin_pos,key_end_pos-key_begin_pos);
-    *key=_trim(*key);
-    *value=trimmed.substr(value_begin_pos,value_end_pos-value_begin_pos);
-    *value=_trim(*value);
+    *key = trimmed.substr(key_begin_pos, key_end_pos - key_begin_pos);
+    *key = _trim(*key);
+    *value = trimmed.substr(value_begin_pos, value_end_pos - value_begin_pos);
+    *value = _trim(*value);
     return true;
 }
 
