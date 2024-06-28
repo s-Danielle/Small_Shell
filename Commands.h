@@ -10,6 +10,7 @@
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
 #define DEFAULT_PROMPT_LINE ("smash> ")
+#define NO_PROCESS_RUNNING (-1)
 class Command {
     // TODO: Add your data members
 public:
@@ -266,10 +267,9 @@ public:
 
 class SmallShell {
 private:
-    //TODO: figure a way to print them in order (Q?)
     SmallShell();
 public:
-    //why are these public?
+    //why are these public? //because I can
     JobsList jobsList;
     Aliases aliases;
     char prompt_line[COMMAND_MAX_LENGTH];
@@ -294,10 +294,6 @@ public:
     // TODO: add extra methods as needed
 
 };
-
-
-
-
 
 
 

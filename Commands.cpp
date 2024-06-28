@@ -190,7 +190,7 @@ void updatePrompt(const char* new_prompt, char* promptLine) {
 //TODO: is COMMAND_MAX_LENGTH the buffersize we need here?
 void getCWD(char* buff) {
     if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
-        perror("smash error: getcwd() failed");
+        perror("smash error: getcwd failed");
     }
 }
 
@@ -394,7 +394,7 @@ void ExternalCommand::execute() {
 
         newargv[0] = BASH_PATH;
         newargv[1] = BASH_FLAG;
-        newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing
+        newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing //do you?
         newargv[3] = nullptr;
         wildcard = true;
     }
@@ -430,7 +430,7 @@ void ExternalCommand::execute() {
             if (wildcard) {
                 delete[] newargv;
             }
-            shell.currentProcess = -1;
+            shell.currentProcess = NO_PROCESS_RUNNING;
         }
     }
 }
@@ -524,6 +524,8 @@ void JobsList::bringJobToForeground(int jobId) {
     if (waitpid(job->pid, nullptr, 0) == FAIL) {
         HANDLE_ERROR(waitpid);
     }
+    //TODO where do you chnage current process back to NO_PROCCESS_RUNNING?
+    //use the new macro please easier to find needed it for signal handler
 }
 
 
@@ -620,3 +622,5 @@ bool Aliases::parseAliasCommand(const char *cmd_line, string *key, string *value
     *value=_trim(*value);
     return true;
 }
+
+
