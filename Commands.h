@@ -4,10 +4,13 @@
 #include <map>
 #include <unordered_map>
 #include <cstring>
+#include <list>
+#include <unordered_set>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
 #define DEFAULT_PROMPT_LINE ("smash> ")
+#define NO_PROCESS_RUNNING (-1)
 class Command {
     // TODO: Add your data members
 public:
@@ -228,7 +231,7 @@ public:
 
 class aliasCommand : public BuiltInCommand {
 public:
-    aliasCommand(const char* cmd_line);
+    aliasCommand(const char* cmd_line,int argc, char** argv):BuiltInCommand(cmd_line,argc,argv){}
 
     virtual ~aliasCommand() {}
 
@@ -237,7 +240,7 @@ public:
 
 class unaliasCommand : public BuiltInCommand {
 public:
-    unaliasCommand(const char* cmd_line);
+    unaliasCommand(const char* cmd_line,int argc, char** argv):BuiltInCommand(cmd_line,argc,argv){}
 
     virtual ~unaliasCommand() {}
 
@@ -255,15 +258,34 @@ public:
     void execute() override;
 };
 
-typedef std::unordered_map<std::string, std::string> aliasMap;
+/* ALIAS */
+
+using namespace std;
+class Aliases {
+private:
+    // static const regex aliases_pattern;
+    map<string,string> aliases_map;
+    list <string> alias_list;
+    unordered_set<string> saved_words;
+public:
+    Aliases();
+    bool addAlias(const char* cmd_line); //returns false if exists or reserved
+    bool removeAlias(string &key);
+    bool isAliasOrReseved(string &key);
+    static bool isLegalAliasFormat(const char* cmd_line);
+    static bool isLegalAliasFormat(const string& cmd_line);
+    void printAliases();
+    static bool parseAliasCommand(const char* cmd_line, string* key, string* value);
+    void deAlias(char *cmd_line);
+};
+
 class SmallShell {
 private:
-    aliasMap aliases;
-    //TODO: figure a way to print them in order (Q?)
     SmallShell();
 public:
-    //why are these public?
+    //why are these public? //because I can
     JobsList jobsList;
+    Aliases aliases;
     char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
     pid_t currentProcess = -1;
@@ -286,5 +308,9 @@ public:
     // TODO: add extra methods as needed
 
 };
+
+
+
+
 
 #endif //SMASH_COMMAND_H_
