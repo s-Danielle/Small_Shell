@@ -333,6 +333,66 @@ void ChangeDirCommand::execute() {
 void PipeCommand::execute() {
     //two ready to go commands
     //create pipe
+    int pipefd[2];
+    if (pipe(pipefd) == FAIL) {
+        HANDLE_ERROR(pipe);
+        return;
+    }
+    pid_t pid1 = fork();
+    if (pid1 == FAIL) {
+        HANDLE_ERROR(fork);
+        return;
+    }
+    if (pid1 == 0) {
+        // "in" side of the pipe
+        //close the read side
+        close(pipefd[0]);
+        //redirect output to pipe
+        int output  = pipeToErr ? STDERR_FILENO : STDOUT_FILENO;
+        //redirect output to pipe
+        if (dup2(pipefd[1], output) == FAIL) {
+            HANDLE_ERROR(dup2);
+            return;
+        }
+        in->execute();  //TODO: better error handling
+        close(pipefd[1]);
+    }
+
+    pid_t pid2 = fork();
+
+    if (pid2 == FAIL) {
+        HANDLE_ERROR(fork);
+        return;
+    }
+
+    if (pid2 == 0) {
+        // "out" side of the pipe
+        //close the write side
+        close(pipefd[1]);
+        //redirect input to pipe
+        if (dup2(pipefd[0], STDIN_FILENO) == FAIL) {
+            HANDLE_ERROR(dup2);
+            return;
+        }
+        out->execute(); //TODO: better error handling
+        close(pipefd[0]);
+    }else {
+        //parent
+        close(pipefd[0]);
+        close(pipefd[1]);
+        //wait for both children
+        SmallShell& shell = SmallShell::getInstance();
+        shell.currentProcess = pid1;
+        shell.pipedProcess = pid2;
+        if (waitpid(pid1, nullptr, 0) == FAIL) {
+            HANDLE_ERROR(waitpid);
+        }
+        if (waitpid(pid2, nullptr, 0) == FAIL) {
+            HANDLE_ERROR(waitpid);
+        }
+        shell.currentProcess = NO_PROCESS_RUNNING;
+        shell.pipedProcess = NO_PROCESS_RUNNING;
+    }
     //fork
     //connect pipe
     //excute each command

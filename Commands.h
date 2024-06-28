@@ -64,12 +64,15 @@ public:
         char* delimiter = strchr(cmdCopy, '|');
         pipeToErr = (*(delimiter + 1) == '&');
         *delimiter = '\0';
-        in = SmallShell::getInstance().CreateCommand(cmdCopy, cmdCopy, argc, argv, false);
+        in = SmallShell::getInstance().CreateCommand(cmdCopy, cmdCopy, argc, argv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
         char *outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
         out = SmallShell::getInstance().CreateCommand(outCmd, outCmd, argc, argv, false);
     };
 
-    virtual ~PipeCommand() {}
+    virtual ~PipeCommand() {
+        delete in;
+        delete out;
+    }
 
     void execute() override;
 };
@@ -260,7 +263,7 @@ public:
 
 /* ALIAS */
 
-using namespace std;
+// using namespace std;
 class Aliases {
 private:
     // static const regex aliases_pattern;
@@ -288,7 +291,8 @@ public:
     Aliases aliases;
     char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
-    pid_t currentProcess = -1;
+    pid_t currentProcess = NO_PROCESS_RUNNING;
+    pid_t pipedProcess = NO_PROCESS_RUNNING; //will hold the pid of the process that is piped to
 
 
     Command* CreateCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv, bool isBg);
