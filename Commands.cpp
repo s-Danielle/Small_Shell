@@ -11,8 +11,7 @@
 #include <fcntl.h>
 #include <unordered_map>
 #include <cassert>
-#include <bits/regex.h>
-#include <bits/regex_constants.h>
+#include <regex>
 
 #define HANDLE_ERROR(syscall) do { \
     perror("smash error: " #syscall " failed"); \
