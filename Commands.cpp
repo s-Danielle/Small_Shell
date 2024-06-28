@@ -105,14 +105,14 @@ void _removeBackgroundSign(char* cmd_line) {
 }
 
 //moved it here to avoid circular dependency
-PipeCommand::PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line[0], argc, argv) {
+PipeCommand::PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line, argc, argv) {
     char* delimiter = strchr(cmdCopy, '|');
     pipeToErr = (*(delimiter + 1) == '&');
     *delimiter = '\0';
     SmallShell& shell = SmallShell::getInstance();
-    in = shell.CreateCommand(cmdCopy, cmdCopy, argc, argv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
+    in = shell.CreateCommand(cmdCopy, cmdCopy, _parseCommandLine(cmdCopy, inargv), inargv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
     char* outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
-    out = shell.CreateCommand(outCmd, outCmd, argc, argv, false);
+    out = shell.CreateCommand(outCmd, outCmd,_parseCommandLine(outCmd, outargv), outargv, false);
 };
 
 
@@ -131,6 +131,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     string firstWord = argv[0];
     if (strchr(cmdCopy, '|') != nullptr) {
         //if cmdCopy contains '|' then we have a pipe   
+        return new PipeCommand(cmd_line, cmdCopy, argc, argv);
     }
     else if (strchr(cmdCopy, '>') != nullptr) {
         //if cmdCopy contains '>' then we have a redirection
@@ -366,8 +367,9 @@ void PipeCommand::execute() {
             HANDLE_ERROR(dup2);
             return;
         }
+        close(pipefd[1]);   //do i want to close this now or later?
         in->execute();  //TODO: better error handling
-        close(pipefd[1]);
+        return;
     }
 
     pid_t pid2 = fork();
@@ -386,8 +388,8 @@ void PipeCommand::execute() {
             HANDLE_ERROR(dup2);
             return;
         }
+        close(pipefd[0]);   //do i want to close this now or later?
         out->execute(); //TODO: better error handling
-        close(pipefd[0]);
     }
     else {
         //parent
@@ -463,11 +465,6 @@ void unaliasCommand::execute() {
 #define BASH_PATH "/bin/bash"
 #define BASH_FLAG "-c"
 void ExternalCommand::execute() {
-    //assume cmd is parsed
-    //check for '*', '?'
-    //check for '&' flag (should be a field in the externalcommand class)
-    //fork, execv, and wait according to logic
-    //documnent running process
     bool wildcard = false;
     char** newargv = argv;
     if (strchr(commandString, '*') || strchr(commandString, '?')) {
@@ -490,9 +487,14 @@ void ExternalCommand::execute() {
         //(ISO C++ wont allow string to char* convertions)
         //idk why but leave this here  for me until resolved for easy fix thank you :)
 
-        newargv[0] = BASH_PATH;
-        newargv[1] = BASH_FLAG;
-        newargv[2] = (char*) command.c_str();   //not best practice but i know what im doing //do you?
+        //i aint reading all that ^^^
+
+        const char* path = BASH_PATH;
+        const char* flag = BASH_FLAG;
+
+        newargv[0] = const_cast<char*>(path);
+        newargv[1] = const_cast<char*>(flag);
+        newargv[2] = const_cast<char*>(command.c_str());   
         newargv[3] = nullptr;
         wildcard = true;
     }

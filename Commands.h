@@ -12,7 +12,6 @@
 #define DEFAULT_PROMPT_LINE ("smash> ")
 #define NO_PROCESS_RUNNING (-1)
 
-class SmallShell;
 class Command {
     // TODO: Add your data members
 public:
@@ -45,6 +44,8 @@ public:
 
 class ExternalCommand : public Command {
     bool isBg;
+    // static char * bashPath = "/bin/bash";
+    // static char * bashFlag = "-c";
 public:
     ExternalCommand(const char* cmd_line, int argc, char** argv, bool isBg) : Command(cmd_line, argc, argv), isBg(isBg) {};
 
@@ -59,10 +60,12 @@ class PipeCommand : public Command {
     Command* out;
     char inCmd[COMMAND_MAX_LENGTH];
     char outCmd[COMMAND_MAX_LENGTH];
+    char* inargv[COMMAND_MAX_ARGS];
+    char* outargv[COMMAND_MAX_ARGS];
     char* cmdCopy; //WILL be messed with
     bool pipeToErr;
 public:
-    PipeCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv); 
+    PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv); 
 
     virtual ~PipeCommand() {
         delete in;
@@ -284,7 +287,7 @@ public:
     //why are these public? //because I can
     JobsList jobsList;
     Aliases aliases;
-    char prompt_line[COMMAND_MAX_LENGTH]  = DEFAULT_PROMPT_LINE;
+    char prompt_line[COMMAND_MAX_LENGTH];
     char last_path[COMMAND_MAX_LENGTH];
     pid_t currentProcess = NO_PROCESS_RUNNING;
     pid_t pipedProcess = NO_PROCESS_RUNNING; //will hold the pid of the process that is piped to
