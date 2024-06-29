@@ -360,6 +360,13 @@ void PipeCommand::execute() {
     if (pid1 == 0) {
         // "in" side of the pipe
         //close the read side
+        if(setpgrp() == FAIL){
+            HANDLE_ERROR(setpgrp);
+            return;
+            close(pipefd[0]);
+            close(pipefd[1]);
+            //handle fd's
+        }
         close(pipefd[0]);
         //redirect output to pipe
         int output = pipeToErr ? STDERR_FILENO : STDOUT_FILENO;
@@ -370,7 +377,7 @@ void PipeCommand::execute() {
         }
         close(pipefd[1]);   //do i want to close this now or later?
         in->execute();  //TODO: better error handling
-        return;
+        exit(0);
     }
 
     pid_t pid2 = fork();
@@ -383,6 +390,11 @@ void PipeCommand::execute() {
     if (pid2 == 0) {
         // "out" side of the pipe
         //close the write side
+        if(setpgrp() == FAIL){
+            HANDLE_ERROR(setpgrp);
+            return;
+            //handle fd's
+        }
         close(pipefd[1]);
         //redirect input to pipe
         if (dup2(pipefd[0], STDIN_FILENO) == FAIL) {
@@ -391,6 +403,7 @@ void PipeCommand::execute() {
         }
         close(pipefd[0]);   //do i want to close this now or later?
         out->execute(); //TODO: better error handling
+        exit(0);
     }
     else {
         //parent
