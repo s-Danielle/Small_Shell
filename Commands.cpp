@@ -120,6 +120,14 @@ PipeCommand::PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** a
     out = shell.CreateCommand(outCmd, outCmd,_parseCommandLine(outCmd, outargv), outargv, false);
 };
 
+RedirectionCommand::RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line, argc, argv) {
+    char* delimiter = strchr(cmdCopy, '>');
+    overwrite = (*(delimiter + 1) == '>');
+    *delimiter = '\0';
+    filePath = overwrite ? delimiter + 2 : delimiter + 1;
+    
+}
+
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -140,6 +148,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (strchr(cmdCopy, '>') != nullptr) {
         //if cmdCopy contains '>' then we have a redirection
+        return new RedirectionCommand(cmd_line, cmdCopy, argc, argv);
     }
     else if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
@@ -202,6 +211,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
     if (cmd) {
         cmd->execute();
     }
+    delete cmd;
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
@@ -481,7 +491,7 @@ void ListDirCommand::execute() {
         };
         folder_path=buff;
     }
-    char dir_buff[DIR_BUFF_SIZE];
+    char dir_buff[DIR_BUFF_SIZE];   //TODO:piaza said 4096 bytes
     linux_dirent *dirent;
     int file_descriptor=open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(file_descriptor==-1) {
@@ -546,7 +556,6 @@ void unaliasCommand::execute() {
 }
 
 
-//TODO: move these to static const class members
 #define BASH_PATH "/bin/bash"
 #define BASH_FLAG "-c"
 void ExternalCommand::execute() {
@@ -577,7 +586,7 @@ void ExternalCommand::execute() {
         const char* path = BASH_PATH;
         const char* flag = BASH_FLAG;
 
-        newargv[0] = const_cast<char*>(path);
+        newargv[0] = const_cast<char*>(path); //im not going to change any of these, compiler should chill out fr fr
         newargv[1] = const_cast<char*>(flag);
         newargv[2] = const_cast<char*>(command.c_str());   
         newargv[3] = nullptr;

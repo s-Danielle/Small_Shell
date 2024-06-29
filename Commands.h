@@ -88,10 +88,11 @@ public:
 class RedirectionCommand : public Command {
     // TODO: Add your data members
     Command* in;
-    Command* out;
     char* cmdCopy; //WILL be messed with
+    char* filePath;
+    bool overwrite;
 public:
-    explicit RedirectionCommand(const char** cmd_line, char* cmdCopy, int argc, char** argv);
+    explicit RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv);
 
     virtual ~RedirectionCommand() {}
 
