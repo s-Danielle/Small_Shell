@@ -163,7 +163,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
         return new ChangeDirCommand(cmd_line, argc,argv,  this->last_path);
     }
     else if (firstWord == "chprompt") {
-        return new changePrompt(cmd_line, this->prompt_line);
+        return new changePrompt(cmd_line, argc,argv);
     }
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line);
@@ -246,17 +246,15 @@ void GetCurrDirCommand::execute() {
     std::cout << buff << endl; //stays smash even with chprompt @54
 }
 void changePrompt::execute() {
-
-    char* arguments[COMMAND_MAX_LENGTH];
-    int argc = _parseCommandLine(this->commandString, arguments);
+    SmallShell &smash=SmallShell::getInstance();
     if (argc == 1) { //reset
-        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
-        strcpy(pPromptLine, DEFAULT_PROMPT_LINE);
+        memset(smash.prompt_line, 0, COMMAND_MAX_LENGTH);
+        strcpy(smash.prompt_line, DEFAULT_PROMPT_LINE);
     }
     else { //we can ignore other parameters @pdf
-        memset(pPromptLine, 0, COMMAND_MAX_LENGTH);
-        strcpy(pPromptLine, arguments[1]);
-        ::strcat(pPromptLine, "> ");
+        memset(smash.prompt_line, 0, COMMAND_MAX_LENGTH);
+        strcpy(smash.prompt_line, argv[1]);
+        ::strcat(smash.prompt_line, "> ");
     }
 }
 

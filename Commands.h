@@ -255,10 +255,8 @@ public:
 };
 
 class changePrompt : public BuiltInCommand {
-private:
-    char* pPromptLine;
 public:
-    changePrompt(const char* cmd_line, char* promptLine) : BuiltInCommand(cmd_line), pPromptLine(promptLine) {}
+    changePrompt(const char* cmd_line,int argc, char** argv) : BuiltInCommand(cmd_line,argc,argv) {}
 
     virtual ~changePrompt() {}
 
