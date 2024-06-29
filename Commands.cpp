@@ -340,7 +340,7 @@ void ChangeDirCommand::execute() {
         return;
     }
     if (argc > 2) {
-        ::perror("smash error: cd: too many arguments\n");
+        cout<< ("smash error: cd: too many arguments\n");
         return;
     }
     if (argc == 1) {
@@ -351,7 +351,7 @@ void ChangeDirCommand::execute() {
 
     if (first_arg == "-") {
         if (plast_cwd[0] == '\0') {
-            ::perror("smash error: cd: OLDPWD not set");
+            cout<<("smash error: cd: OLDPWD not set")<<endl;
             return;
         }
         if (chdir(plast_cwd) != 0) {
@@ -529,7 +529,7 @@ void printDirEntryVector(vector<DirEntry>& entries) {
 }
 void ListDirCommand::execute() {
     if (argc>2) {
-        perror("smash: listdir: too many arguments");
+        cout <<("smash: listdir: too many arguments")<<endl;
         return;
     }
     string folder_path;
@@ -578,14 +578,12 @@ void ListDirCommand::execute() {
 
 void GetUserCommand::execute() {
     if (argc>2) {
-        perror("smash error: getuser: too many arguments");
+        cout<<("smash error: getuser: too many arguments") <<endl;
         return;
     }
     pid_t p=argc > 1? atoi(argv[1]): getpid();
     if (kill(p,0)!=0) {
-        string msg= "smash error: getuser: process " + to_string(p) +" does not exist";
-
-        perror(msg.c_str());
+        cout <<"smash error: getuser: process " << to_string(p) <<" does not exist"<<endl;
         return;
     }
     string status_file="/proc/" +to_string(p)+"/status";
@@ -621,29 +619,26 @@ void aliasCommand::execute() {
         return;
     }
     if (!Aliases::isLegalAliasFormat(commandString)) {
-        perror("smsh error: alias: invalid alias format");
+        cout<<("smsh error: alias: invalid alias format")<<endl;
         return;
     }
     string key, value;
     Aliases::parseAliasCommand(commandString, &key, &value);
 
     if (!smash.aliases.addAlias(commandString)) {
-        string err_buff = "smash error: alias " + key + " already exists or is a reserved word";
-        perror(err_buff.c_str());
+        cout << "smash error: alias " << key << " already exists or is a reserved word"<<endl;
     }
 }
 
 void unaliasCommand::execute() {
     if (argc == 1) {
-        perror("smash error: unalias: not enough arguments");
+        cout<<("smash error: unalias: not enough arguments")<<endl;
         return;
     }
     SmallShell& smash = SmallShell::getInstance();
     string key = _trim(argv[1]);
     if (!smash.aliases.removeAlias(key)) {
-        string err_buf = "smash error: unalias: " + key + " alias does not exist";
-        perror(err_buf.c_str());
-    }
+         cout << "smash error: unalias: " <<key << " alias does not exist";    }
 }
 
 
