@@ -121,6 +121,16 @@ PipeCommand::PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** a
     out = shell.CreateCommand(outCmd, outCmd,_parseCommandLine(outCmd, outargv), outargv, false);
 };
 
+RedirectionCommand::RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line, argc, argv) {
+    char* delimiter = strchr(cmdCopy, '>');
+    overwrite = (*(delimiter + 1) == '>');
+    *delimiter = '\0';
+    filePath = overwrite ? string(delimiter + 2) : string(delimiter + 1);
+    filePath = _trim(filePath);    //feels right (and examples in pdf agrees)
+    SmallShell& shell = SmallShell::getInstance();
+    in = shell.CreateCommand(cmdCopy, cmdCopy, _parseCommandLine(cmdCopy, inargv), inargv, false);
+}
+
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -141,6 +151,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (strchr(cmdCopy, '>') != nullptr) {
         //if cmdCopy contains '>' then we have a redirection
+        return new RedirectionCommand(cmd_line, cmdCopy, argc, argv);
     }
     else if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
@@ -206,6 +217,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
     if (cmd) {
         cmd->execute();
     }
+    delete cmd;
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
@@ -376,6 +388,13 @@ void PipeCommand::execute() {
     if (pid1 == 0) {
         // "in" side of the pipe
         //close the read side
+        if(setpgrp() == FAIL){
+            HANDLE_ERROR(setpgrp);
+            return;
+            close(pipefd[0]);
+            close(pipefd[1]);
+            //handle fd's
+        }
         close(pipefd[0]);
         //redirect output to pipe
         int output = pipeToErr ? STDERR_FILENO : STDOUT_FILENO;
@@ -386,7 +405,7 @@ void PipeCommand::execute() {
         }
         close(pipefd[1]);   //do i want to close this now or later?
         in->execute();  //TODO: better error handling
-        return;
+        exit(0);
     }
 
     pid_t pid2 = fork();
@@ -399,6 +418,11 @@ void PipeCommand::execute() {
     if (pid2 == 0) {
         // "out" side of the pipe
         //close the write side
+        if(setpgrp() == FAIL){
+            HANDLE_ERROR(setpgrp);
+            return;
+            //handle fd's
+        }
         close(pipefd[1]);
         //redirect input to pipe
         if (dup2(pipefd[0], STDIN_FILENO) == FAIL) {
@@ -407,6 +431,7 @@ void PipeCommand::execute() {
         }
         close(pipefd[0]);   //do i want to close this now or later?
         out->execute(); //TODO: better error handling
+        exit(0);
     }
     else {
         //parent
@@ -430,7 +455,47 @@ void PipeCommand::execute() {
     //excute each command
 }
 
-void WatchCommand::execute() {
+
+
+//redirection execute
+void RedirectionCommand::execute() {
+    int fd;
+    if (overwrite) {
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+    }
+    else {
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, S_IRWXU);
+    }
+    if (fd == FAIL) {
+        HANDLE_ERROR(open);
+        return;
+    }
+    pid_t pid = fork();
+    if (pid == FAIL) {
+        HANDLE_ERROR(fork);
+        return;
+    }
+    if (pid == 0) {
+        if (setpgrp() == FAIL) {
+            HANDLE_ERROR(setpgrp);
+            return;
+        }
+        if (dup2(fd, STDOUT_FILENO) == FAIL) {
+            HANDLE_ERROR(dup2);
+            return;
+        }
+        close(fd);
+        in->execute();
+        exit(0);
+    }
+    else {
+        SmallShell& shell = SmallShell::getInstance();
+        shell.currentProcess = pid;
+        if (waitpid(pid, nullptr, 0) == FAIL) {
+            HANDLE_ERROR(waitpid);
+        }
+        shell.currentProcess = NO_PROCESS_RUNNING;
+    }
 
 }
 
@@ -481,7 +546,7 @@ void ListDirCommand::execute() {
         };
         folder_path=buff;
     }
-    char dir_buff[DIR_BUFF_SIZE];
+    char dir_buff[DIR_BUFF_SIZE];   //TODO:piaza said 4096 bytes
     linux_dirent *dirent;
     int file_descriptor=open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(file_descriptor==-1) {
@@ -585,7 +650,6 @@ void unaliasCommand::execute() {
 }
 
 
-//TODO: move these to static const class members
 #define BASH_PATH "/bin/bash"
 #define BASH_FLAG "-c"
 void ExternalCommand::execute() {
@@ -616,7 +680,7 @@ void ExternalCommand::execute() {
         const char* path = BASH_PATH;
         const char* flag = BASH_FLAG;
 
-        newargv[0] = const_cast<char*>(path);
+        newargv[0] = const_cast<char*>(path); //im not going to change any of these, compiler should chill out fr fr
         newargv[1] = const_cast<char*>(flag);
         newargv[2] = const_cast<char*>(command.c_str());   
         newargv[3] = nullptr;
