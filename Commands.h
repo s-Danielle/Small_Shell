@@ -89,7 +89,8 @@ class RedirectionCommand : public Command {
     // TODO: Add your data members
     Command* in;
     char* cmdCopy; //WILL be messed with
-    char* filePath;
+    // char* filePath;
+    std::string filePath;  //ugly hack but whatever
     char* inargv[COMMAND_MAX_ARGS];
     bool overwrite;
 public:

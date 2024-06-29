@@ -124,7 +124,8 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, char* cmdCopy, int 
     char* delimiter = strchr(cmdCopy, '>');
     overwrite = (*(delimiter + 1) == '>');
     *delimiter = '\0';
-    filePath = overwrite ? delimiter + 2 : delimiter + 1;
+    filePath = overwrite ? string(delimiter + 2) : string(delimiter + 1);
+    filePath = _trim(filePath);    //feels right (and examples in pdf agrees)
     SmallShell& shell = SmallShell::getInstance();
     in = shell.CreateCommand(cmdCopy, cmdCopy, _parseCommandLine(cmdCopy, inargv), inargv, false);
 }
@@ -449,10 +450,10 @@ void PipeCommand::execute() {
 void RedirectionCommand::execute() {
     int fd;
     if (overwrite) {
-        fd = open(filePath, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
     }
     else {
-        fd = open(filePath, O_CREAT | O_WRONLY | O_APPEND, S_IRWXU);
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, S_IRWXU);
     }
     if (fd == FAIL) {
         HANDLE_ERROR(open);
