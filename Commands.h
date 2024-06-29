@@ -223,9 +223,9 @@ public:
 
 class GetUserCommand : public BuiltInCommand {
 public:
-    GetUserCommand(const char* cmd_line);
+    GetUserCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv){}
 
-    virtual ~GetUserCommand() {}
+    virtual ~GetUserCommand() = default;
 
     void execute() override;
 };
