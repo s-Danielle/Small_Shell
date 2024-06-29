@@ -806,13 +806,13 @@ void JobsList::bringJobToForeground(int jobId) {
         job = entries[jobId];
     }
     SmallShell& shell = SmallShell::getInstance();
+    pid_t pid = job->pid;
     shell.jobsList.removeJobById(job->id);
     shell.currentProcess = job->pid;
-    if (waitpid(job->pid, nullptr, 0) == FAIL) {
+    if (waitpid(pid, nullptr, 0) == FAIL) {
         HANDLE_ERROR(waitpid);
     }
-    //TODO where do you chnage current process back to NO_PROCCESS_RUNNING?
-    //use the new macro please easier to find needed it for signal handler
+    shell.currentProcess = NO_PROCESS_RUNNING;
 }
 
 
