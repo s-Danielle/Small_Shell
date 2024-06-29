@@ -108,7 +108,8 @@ private:
     char* plast_cwd;
 public:
     // TODO: Add your data members public:
-    ChangeDirCommand(const char* cmd_line, char* pLast_cwd) : BuiltInCommand(cmd_line), plast_cwd(pLast_cwd) {}
+    ChangeDirCommand(const char* cmd_line, int argc, char** argv, char* pLast_cwd) :
+    BuiltInCommand(cmd_line,argc,argv), plast_cwd(pLast_cwd) {}
 
     virtual ~ChangeDirCommand() {}
 
@@ -228,9 +229,9 @@ public:
 
 class GetUserCommand : public BuiltInCommand {
 public:
-    GetUserCommand(const char* cmd_line);
+    GetUserCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv){}
 
-    virtual ~GetUserCommand() {}
+    virtual ~GetUserCommand() = default;
 
     void execute() override;
 };

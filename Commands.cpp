@@ -13,7 +13,8 @@
 #include <cassert>
 #include <regex>
 
-
+#include <pwd.h>
+#include <grp.h>
 #include <dirent.h>
 #include <sys/syscall.h>
 
@@ -159,7 +160,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
         return new ShowPidCommand(cmd_line);
     }
     else if (firstWord == "cd") {
-        return new ChangeDirCommand(cmd_line, this->last_path);
+        return new ChangeDirCommand(cmd_line, argc,argv,  this->last_path);
     }
     else if (firstWord == "chprompt") {
         return new changePrompt(cmd_line, this->prompt_line);
@@ -184,6 +185,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
     }
     else if (firstWord == "listdir") {
         return new ListDirCommand(cmd_line, argc, argv);
+    }
+    else if (firstWord == "getuser") {
+        return new GetUserCommand(cmd_line, argc, argv);
     }
     else {
         return new ExternalCommand(cmd_line, argc, argv, isBg);
@@ -260,10 +264,6 @@ void ShowPidCommand::execute() {
     std::cout << "smash pid is " << getpid() << endl; //stays smash even with chprompt @54, getpid cannot fail
 }
 
-void updateLastPWD(char* last_pwd, char* current_pwd) {
-    memset(last_pwd, 0, COMMAND_MAX_LENGTH);
-    strcpy(last_pwd, current_pwd);
-}
 
 void KillCommand::execute() {
     SmallShell& shell = SmallShell::getInstance();
@@ -323,44 +323,53 @@ void ForegroundCommand::execute() {
     }
 }
 
+
+
+
+
+
+
+void updateLastPWD(char* newpwd) {
+    SmallShell &smash=SmallShell::getInstance();
+    memset(smash.last_path, 0, COMMAND_MAX_LENGTH);
+    strcpy(smash.last_path, newpwd);
+}
+
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
-    getCWD(buff_cwd);
-    char* arguments[COMMAND_MAX_LENGTH];
-    int argc = _parseCommandLine(this->commandString, arguments);
-
+    getcwd(buff_cwd,COMMAND_MAX_LENGTH);
+    if (!buff_cwd) {
+        HANDLE_ERROR(getcwd);
+        return;
+    }
     if (argc > 2) {
         ::perror("smash error: cd: too many arguments\n");
         return;
     }
     if (argc == 1) {
-        updateLastPWD(plast_cwd, buff_cwd);
+        updateLastPWD(buff_cwd);
         return;
     }
-    string first_arg = arguments[1];
+    string first_arg = argv[1];
 
-    if (first_arg.compare("-") == 0) {
+    if (first_arg == "-") {
         if (plast_cwd[0] == '\0') {
             ::perror("smash error: cd: OLDPWD not set");
             return;
         }
-        else {
-            if (chdir(plast_cwd) != 0) {
-                perror("smash error: chdir failed");
-                return;
-            }
-            else {
-                //TODO handle - logic after they answer in piazza @179
-            }
+        if (chdir(plast_cwd) != 0) {
+            HANDLE_ERROR(chdir);
+            return;
         }
+        updateLastPWD(buff_cwd);
+        return;
     }
+    //from here chdir should eat it
     if (chdir(first_arg.c_str()) != 0) {
         perror("smash error: chdir failed");
         return;
     }
-    else {
-        updateLastPWD(plast_cwd, buff_cwd);
-    }
+    updateLastPWD( buff_cwd);
 }
 /** execute pipe commands */
 void PipeCommand::execute() {
@@ -446,6 +455,8 @@ void PipeCommand::execute() {
     //excute each command
 }
 
+
+
 //redirection execute
 void RedirectionCommand::execute() {
     int fd;
@@ -485,6 +496,7 @@ void RedirectionCommand::execute() {
         }
         shell.currentProcess = NO_PROCESS_RUNNING;
     }
+
 }
 
 /* LISTDIR FUNCTIONS*/
@@ -505,7 +517,7 @@ bool DirEntCmp1(const DirEntry& a, const DirEntry& b) {
     if (a.isDir != b.isDir) {
         return !a.isDir; //trust the logic
     }
-    return a.name > b.name;
+    return a.name < b.name;
 }
 
 void sortDirEntryVector(vector<DirEntry>& entries) {
@@ -556,7 +568,8 @@ void ListDirCommand::execute() {
             dirent=(linux_dirent*)(dir_buff+bpos);
             bpos+=dirent->d_reclen;
             char dir_type= *(dir_buff + bpos + dirent->d_reclen - 1);
-            if(dir_type==DT_REG || dir_type==DT_DIR) {
+            if(dir_type==DT_REG || dir_type==DT_DIR ){
+                if (dirent->d_name[0]=='.'){continue;}
                 dir_entries.push_back({string(dirent->d_name), dir_type==DT_DIR});
             }
         }
@@ -564,6 +577,44 @@ void ListDirCommand::execute() {
     sortDirEntryVector(dir_entries);
     printDirEntryVector(dir_entries);
 
+}
+
+void GetUserCommand::execute() {
+    if (argc>2) {
+        perror("smash error: getuser: too many arguments");
+        return;
+    }
+    pid_t p=argc > 1? atoi(argv[1]): getpid();
+    if (kill(p,0)!=0) {
+        string msg= "smash error: getuser: process " + to_string(p) +" does not exist";
+
+        perror(msg.c_str());
+        return;
+    }
+    string status_file="/proc/" +to_string(p)+"/status";
+    int file_d=open(status_file.c_str(), O_RDONLY);
+    if (file_d==-1) {
+        perror("smash error: open failed");
+        return;
+    }
+    char buff[DIR_BUFF_SIZE];
+    ssize_t b_read= read(file_d, buff, DIR_BUFF_SIZE-1);
+    if (b_read==-1) {
+        close(file_d);
+        perror("smash error: read failed");
+        return;
+    }
+    buff[b_read]='\0';
+    close(file_d);
+    string file_contents=buff;
+    string user_id_str=file_contents.substr(file_contents.find("Uid:")+5);
+    user_id_str=user_id_str.substr(0,user_id_str.find_first_of('\n'));
+    string group_id_str=file_contents.substr(file_contents.find("Gid:")+5);
+    group_id_str=group_id_str.substr(0,group_id_str.find_first_of('\n'));
+    struct passwd* user =getpwuid(stoul(user_id_str.substr(user_id_str.find('\t'))));
+    struct group* group =getgrgid(stoul(group_id_str.substr(group_id_str.find('\t'))));
+
+    cout << "User: " << user->pw_name << endl << "Group: " << group->gr_name << endl;
 }
 
 void aliasCommand::execute() {
