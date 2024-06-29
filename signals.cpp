@@ -12,7 +12,7 @@ void ctrlCHandler(int sig_num) {
         if(kill(smash.currentProcess,SIGINT)==-1) {
             perror("smash error: kill failed");
         }
-        cout << "smash: process " << smash.currentProcess << " was killed." <<endl;
+        cout << "smash: process " << smash.currentProcess << " was killed" <<endl;
         smash.currentProcess=NO_PROCESS_RUNNING;
     }
 }
