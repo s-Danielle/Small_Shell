@@ -13,7 +13,6 @@
 #define DIR_BUFF_SIZE (4096)
 
 class Command {
-    // TODO: Add your data members
 public:
     int argc;
     char** argv;
@@ -32,7 +31,6 @@ public:
     virtual void execute() = 0;
     //virtual void prepare();
     //virtual void cleanup();
-    // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
@@ -55,7 +53,6 @@ public:
 };
 
 class PipeCommand : public Command {
-    // TODO: Add your data members
     Command* in;
     Command* out;
     char inCmd[COMMAND_MAX_LENGTH];
@@ -76,7 +73,6 @@ public:
 };
 
 class WatchCommand : public Command {
-    // TODO: Add your data members
 public:
     WatchCommand(const char* cmd_line);
 
@@ -86,7 +82,6 @@ public:
 };
 
 class RedirectionCommand : public Command {
-    // TODO: Add your data members
     Command* in;
     char* cmdCopy; //WILL be messed with
     // char* filePath;
@@ -107,7 +102,6 @@ class ChangeDirCommand : public BuiltInCommand {
 private:
     char* plast_cwd;
 public:
-    // TODO: Add your data members public:
     ChangeDirCommand(const char* cmd_line, int argc, char** argv, char* pLast_cwd) :
     BuiltInCommand(cmd_line,argc,argv), plast_cwd(pLast_cwd) {}
 
@@ -137,7 +131,6 @@ public:
 class JobsList;
 
 class QuitCommand : public BuiltInCommand {
-    // TODO: Add your data members public:
     bool isKill = false;
 public:
     QuitCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {
@@ -186,7 +179,6 @@ public:
     // JobEntry* getLastJob(int* lastJobId);
 
     // JobEntry* getLastStoppedJob(int* jobId);
-    // TODO: Add extra methods or modify existing ones as needed
 };
 
 class JobsCommand : public BuiltInCommand {
@@ -199,7 +191,6 @@ public:
 };
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     KillCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {};
 
@@ -209,7 +200,6 @@ public:
 };
 
 class ForegroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     ForegroundCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {};
 
@@ -311,7 +301,6 @@ public:
     ~SmallShell() = default;
 
     void executeCommand(const char* cmd_line);
-    // TODO: add extra methods as needed
 
 };
 

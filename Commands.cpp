@@ -233,7 +233,7 @@ void updatePrompt(const char* new_prompt, char* promptLine) {
     memset(promptLine, 0, COMMAND_MAX_LENGTH);
     strcpy(promptLine, new_prompt);
 }
-//TODO: is COMMAND_MAX_LENGTH the buffersize we need here?
+
 void getCWD(char* buff) {
     if (!getcwd(buff, COMMAND_MAX_LENGTH)) {
         perror("smash error: getcwd failed");
@@ -290,7 +290,6 @@ void KillCommand::execute() {
 void QuitCommand::execute() {
     if (isKill) {
         SmallShell& shell = SmallShell::getInstance();
-        //TODO: figure out printing
         shell.jobsList.removeFinishedJobs();
         shell.jobsList.killAllJobs();
         exit(0);
@@ -544,7 +543,7 @@ void ListDirCommand::execute() {
         };
         folder_path=buff;
     }
-    char dir_buff[DIR_BUFF_SIZE];   //TODO:piaza said 4096 bytes
+    char dir_buff[DIR_BUFF_SIZE];   //piaza said 4096 bytes
     linux_dirent *dirent;
     int file_descriptor=open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(file_descriptor==-1) {
