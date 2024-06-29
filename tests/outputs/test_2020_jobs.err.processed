@@ -1,0 +1,26 @@
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: fg: job-id 12 does not exist
+smash error: fg: job-id 12 does not exist
+smash error: fg: job-id 12 does not exist
+smash error: fg: job-id 11 does not exist
+smash error: fg: job-id 11 does not exist
+smash error: fg: job-id 20 does not exist
+smash error: fg: job-id 21 does not exist
+smash error: fg: job-id -2 does not exist
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: fg: job-id 1 does not exist
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
+smash error: fg: jobs list is empty
+smash error: waitpid failed: No child processes
+smash error: kill failed: No such process
