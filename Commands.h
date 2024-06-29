@@ -89,12 +89,16 @@ class RedirectionCommand : public Command {
     // TODO: Add your data members
     Command* in;
     char* cmdCopy; //WILL be messed with
-    char* filePath;
+    // char* filePath;
+    std::string filePath;  //ugly hack but whatever
+    char* inargv[COMMAND_MAX_ARGS];
     bool overwrite;
 public:
     explicit RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv);
 
-    virtual ~RedirectionCommand() {}
+    virtual ~RedirectionCommand() {
+        delete in;
+    }
 
     void execute() override;
 };
