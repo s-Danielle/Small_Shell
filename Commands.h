@@ -90,11 +90,14 @@ class RedirectionCommand : public Command {
     Command* in;
     char* cmdCopy; //WILL be messed with
     char* filePath;
+    char* inargv[COMMAND_MAX_ARGS];
     bool overwrite;
 public:
     explicit RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv);
 
-    virtual ~RedirectionCommand() {}
+    virtual ~RedirectionCommand() {
+        delete in;
+    }
 
     void execute() override;
 };

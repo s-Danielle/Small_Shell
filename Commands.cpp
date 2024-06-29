@@ -125,7 +125,8 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line, char* cmdCopy, int 
     overwrite = (*(delimiter + 1) == '>');
     *delimiter = '\0';
     filePath = overwrite ? delimiter + 2 : delimiter + 1;
-    
+    SmallShell& shell = SmallShell::getInstance();
+    in = shell.CreateCommand(cmdCopy, cmdCopy, _parseCommandLine(cmdCopy, inargv), inargv, false);
 }
 
 
@@ -442,6 +443,47 @@ void PipeCommand::execute() {
     //fork
     //connect pipe
     //excute each command
+}
+
+//redirection execute
+void RedirectionCommand::execute() {
+    int fd;
+    if (overwrite) {
+        fd = open(filePath, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+    }
+    else {
+        fd = open(filePath, O_CREAT | O_WRONLY | O_APPEND, S_IRWXU);
+    }
+    if (fd == FAIL) {
+        HANDLE_ERROR(open);
+        return;
+    }
+    pid_t pid = fork();
+    if (pid == FAIL) {
+        HANDLE_ERROR(fork);
+        return;
+    }
+    if (pid == 0) {
+        if (setpgrp() == FAIL) {
+            HANDLE_ERROR(setpgrp);
+            return;
+        }
+        if (dup2(fd, STDOUT_FILENO) == FAIL) {
+            HANDLE_ERROR(dup2);
+            return;
+        }
+        close(fd);
+        in->execute();
+        exit(0);
+    }
+    else {
+        SmallShell& shell = SmallShell::getInstance();
+        shell.currentProcess = pid;
+        if (waitpid(pid, nullptr, 0) == FAIL) {
+            HANDLE_ERROR(waitpid);
+        }
+        shell.currentProcess = NO_PROCESS_RUNNING;
+    }
 }
 
 /* LISTDIR FUNCTIONS*/
