@@ -149,7 +149,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
         return new ShowPidCommand(cmd_line);
     }
     else if (firstWord == "cd") {
-        return new ChangeDirCommand(cmd_line, this->last_path);
+        return new ChangeDirCommand(cmd_line, argc,argv,  this->last_path);
     }
     else if (firstWord == "chprompt") {
         return new changePrompt(cmd_line, this->prompt_line);
@@ -252,10 +252,6 @@ void ShowPidCommand::execute() {
     std::cout << "smash pid is " << getpid() << endl; //stays smash even with chprompt @54, getpid cannot fail
 }
 
-void updateLastPWD(char* last_pwd, char* current_pwd) {
-    memset(last_pwd, 0, COMMAND_MAX_LENGTH);
-    strcpy(last_pwd, current_pwd);
-}
 
 void KillCommand::execute() {
     SmallShell& shell = SmallShell::getInstance();
@@ -315,44 +311,53 @@ void ForegroundCommand::execute() {
     }
 }
 
+
+
+
+
+
+
+void updateLastPWD(char* newpwd) {
+    SmallShell &smash=SmallShell::getInstance();
+    memset(smash.last_path, 0, COMMAND_MAX_LENGTH);
+    strcpy(smash.last_path, newpwd);
+}
+
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
-    getCWD(buff_cwd);
-    char* arguments[COMMAND_MAX_LENGTH];
-    int argc = _parseCommandLine(this->commandString, arguments);
-
+    getcwd(buff_cwd,COMMAND_MAX_LENGTH);
+    if (!buff_cwd) {
+        HANDLE_ERROR(getcwd);
+        return;
+    }
     if (argc > 2) {
         ::perror("smash error: cd: too many arguments\n");
         return;
     }
     if (argc == 1) {
-        updateLastPWD(plast_cwd, buff_cwd);
+        updateLastPWD(buff_cwd);
         return;
     }
-    string first_arg = arguments[1];
+    string first_arg = argv[1];
 
-    if (first_arg.compare("-") == 0) {
+    if (first_arg == "-") {
         if (plast_cwd[0] == '\0') {
             ::perror("smash error: cd: OLDPWD not set");
             return;
         }
-        else {
-            if (chdir(plast_cwd) != 0) {
-                perror("smash error: chdir failed");
-                return;
-            }
-            else {
-                //TODO handle - logic after they answer in piazza @179
-            }
+        if (chdir(plast_cwd) != 0) {
+            HANDLE_ERROR(chdir);
+            return;
         }
+        updateLastPWD(buff_cwd);
+        return;
     }
+    //from here chdir should eat it
     if (chdir(first_arg.c_str()) != 0) {
         perror("smash error: chdir failed");
         return;
     }
-    else {
-        updateLastPWD(plast_cwd, buff_cwd);
-    }
+    updateLastPWD( buff_cwd);
 }
 /** execute pipe commands */
 void PipeCommand::execute() {
