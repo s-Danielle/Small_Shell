@@ -19,7 +19,7 @@
 #include <sys/syscall.h>
 
 #define HANDLE_ERROR(syscall) do { \
-    perror("smash error: " #syscall " failed"); \
+    perror("smash error: "#syscall" failed"); \
 } while (0)
 #define FAIL (-1)
 
