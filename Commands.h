@@ -62,7 +62,7 @@ class PipeCommand : public Command {
     char* cmdCopy; //WILL be messed with
     bool pipeToErr;
 public:
-    PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv); 
+    PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv);
 
     virtual ~PipeCommand() {
         delete in;
@@ -103,7 +103,7 @@ private:
     char* plast_cwd;
 public:
     ChangeDirCommand(const char* cmd_line, int argc, char** argv, char* pLast_cwd) :
-    BuiltInCommand(cmd_line,argc,argv), plast_cwd(pLast_cwd) {}
+        BuiltInCommand(cmd_line, argc, argv), plast_cwd(pLast_cwd) {}
 
     virtual ~ChangeDirCommand() {}
 
@@ -160,7 +160,11 @@ public:
 public:
     JobsList() = default;
 
-    ~JobsList() = default;
+    ~JobsList() {
+        for (auto it = entries.begin(); it != entries.end(); it++) {
+            delete it->second;
+        }
+    }
 
     void addJob(Command* cmd, pid_t pid);
 
@@ -219,7 +223,7 @@ public:
 
 class GetUserCommand : public BuiltInCommand {
 public:
-    GetUserCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv){}
+    GetUserCommand(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {}
 
     virtual ~GetUserCommand() = default;
 
@@ -228,7 +232,7 @@ public:
 
 class aliasCommand : public BuiltInCommand {
 public:
-    aliasCommand(const char* cmd_line,int argc, char** argv):BuiltInCommand(cmd_line,argc,argv){}
+    aliasCommand(const char* cmd_line, int argc, char** argv) :BuiltInCommand(cmd_line, argc, argv) {}
 
     virtual ~aliasCommand() {}
 
@@ -237,7 +241,7 @@ public:
 
 class unaliasCommand : public BuiltInCommand {
 public:
-    unaliasCommand(const char* cmd_line,int argc, char** argv):BuiltInCommand(cmd_line,argc,argv){}
+    unaliasCommand(const char* cmd_line, int argc, char** argv) :BuiltInCommand(cmd_line, argc, argv) {}
 
     virtual ~unaliasCommand() {}
 
@@ -246,7 +250,7 @@ public:
 
 class changePrompt : public BuiltInCommand {
 public:
-    changePrompt(const char* cmd_line,int argc, char** argv) : BuiltInCommand(cmd_line,argc,argv) {}
+    changePrompt(const char* cmd_line, int argc, char** argv) : BuiltInCommand(cmd_line, argc, argv) {}
 
     virtual ~changePrompt() {}
 
@@ -259,19 +263,19 @@ public:
 class Aliases {
 private:
     // static const regex aliases_pattern;
-    std::map<std::string,std::string> aliases_map;
+    std::map<std::string, std::string> aliases_map;
     std::list <std::string> alias_list;
     std::unordered_set<std::string> saved_words;
 public:
     Aliases();
     bool addAlias(const char* cmd_line); //returns false if exists or reserved
-    bool removeAlias(std::string &key);
-    bool isAliasOrReseved(std::string &key);
+    bool removeAlias(std::string& key);
+    bool isAliasOrReseved(std::string& key);
     static bool isLegalAliasFormat(const char* cmd_line);
     static bool isLegalAliasFormat(const std::string& cmd_line);
     void printAliases();
     static bool parseAliasCommand(const char* cmd_line, std::string* key, std::string* value);
-    void deAlias(char *cmd_line);
+    void deAlias(char* cmd_line);
 };
 
 class SmallShell {
