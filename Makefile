@@ -1,6 +1,6 @@
 SUBMITTERS := 206455222_206394926
 COMPILER := g++
-COMPILER_FLAGS := --std=c++11 -Wall -g
+COMPILER_FLAGS := --std=c++11 -Wall
 SRCS := Commands.cpp signals.cpp smash.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 HDRS := Commands.h signals.h

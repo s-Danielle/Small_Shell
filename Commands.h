@@ -231,8 +231,11 @@ public:
 };
 
 class aliasCommand : public BuiltInCommand {
+    char cmd_Copy[COMMAND_MAX_LENGTH];
 public:
-    aliasCommand(const char* cmd_line, int argc, char** argv) :BuiltInCommand(cmd_line, argc, argv) {}
+    aliasCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv) :BuiltInCommand(cmd_line, argc, argv) {
+        strncpy(this->cmd_Copy, cmdCopy, COMMAND_MAX_LENGTH);
+    }
 
     virtual ~aliasCommand() {}
 

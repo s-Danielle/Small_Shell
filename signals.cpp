@@ -9,8 +9,9 @@ void ctrlCHandler(int sig_num) {
     cout << "smash: got ctrl-C"<<endl;
     SmallShell &smash=SmallShell::getInstance();
     if (smash.currentProcess!=NO_PROCESS_RUNNING) {
-        if(kill(smash.currentProcess,SIGINT)==-1) {
+        if(kill(smash.currentProcess, SIGKILL)==-1) {
             perror("smash error: kill failed");
+            return;
         }
         cout << "smash: process " << smash.currentProcess << " was killed" <<endl;
         smash.currentProcess=NO_PROCESS_RUNNING;
