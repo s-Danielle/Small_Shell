@@ -118,7 +118,7 @@ PipeCommand::PipeCommand(const char* cmd_line, char* cmdCopy, int argc, char** a
     SmallShell& shell = SmallShell::getInstance();
     in = shell.CreateCommand(cmdCopy, cmdCopy, _parseCommandLine(cmdCopy, inargv), inargv, false);  //we trust ourselves not to modify cmdCopy, unless its a pipe/redirect
     char* outCmd = pipeToErr ? delimiter + 2 : delimiter + 1;
-    out = shell.CreateCommand(outCmd, outCmd,_parseCommandLine(outCmd, outargv), outargv, false);
+    out = shell.CreateCommand(outCmd, outCmd, _parseCommandLine(outCmd, outargv), outargv, false);
 };
 
 RedirectionCommand::RedirectionCommand(const char* cmd_line, char* cmdCopy, int argc, char** argv) :Command(cmd_line, argc, argv) {
@@ -160,10 +160,10 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
         return new ShowPidCommand(cmd_line);
     }
     else if (firstWord == "cd") {
-        return new ChangeDirCommand(cmd_line, argc,argv,  this->last_path);
+        return new ChangeDirCommand(cmd_line, argc, argv, this->last_path);
     }
     else if (firstWord == "chprompt") {
-        return new changePrompt(cmd_line, argc,argv);
+        return new changePrompt(cmd_line, argc, argv);
     }
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line);
@@ -172,7 +172,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line, char* cmdCopy, int argc
         return new QuitCommand(cmd_line, argc, argv);
     }
     else if (firstWord == "alias") {
-        return new aliasCommand(cmd_line, argc, argv);
+        return new aliasCommand(cmd_line, cmdCopy, argc, argv);
     }
     else if (firstWord == "unalias") {
         return new unaliasCommand(cmd_line, argc, argv);
@@ -246,7 +246,7 @@ void GetCurrDirCommand::execute() {
     std::cout << buff << endl; //stays smash even with chprompt @54
 }
 void changePrompt::execute() {
-    SmallShell &smash=SmallShell::getInstance();
+    SmallShell& smash = SmallShell::getInstance();
     if (argc == 1) { //reset
         memset(smash.prompt_line, 0, COMMAND_MAX_LENGTH);
         strcpy(smash.prompt_line, DEFAULT_PROMPT_LINE);
@@ -308,14 +308,15 @@ void ForegroundCommand::execute() {
     }
     else {
         int jobId = stringToInt(argv[1]);
+           if (jobId == -1 || argc > 2) {
+            cerr << "smash error: fg: invalid arguments" << endl;
+            return;
+        }
         if (shell.jobsList.getJobById(jobId) == nullptr) {
             cerr << "smash error: fg: job-id " << jobId << " does not exist" << endl;
             return;
         }
-        if (jobId == -1 || argc > 2) {
-            cerr << "smash error: fg: invalid arguments" << endl;
-            return;
-        }
+
         shell.jobsList.bringJobToForeground(jobId);
     }
 }
@@ -327,20 +328,20 @@ void ForegroundCommand::execute() {
 
 
 void updateLastPWD(char* newpwd) {
-    SmallShell &smash=SmallShell::getInstance();
+    SmallShell& smash = SmallShell::getInstance();
     memset(smash.last_path, 0, COMMAND_MAX_LENGTH);
     strcpy(smash.last_path, newpwd);
 }
 
 void ChangeDirCommand::execute() {
     char buff_cwd[COMMAND_MAX_LENGTH];
-    getcwd(buff_cwd,COMMAND_MAX_LENGTH);
+    getcwd(buff_cwd, COMMAND_MAX_LENGTH);
     if (!buff_cwd) {
         HANDLE_ERROR(getcwd);
         return;
     }
     if (argc > 2) {
-        cout<< ("smash error: cd: too many arguments\n");
+        cerr << ("smash error: cd: too many arguments") << endl;
         return;
     }
     if (argc == 1) {
@@ -351,7 +352,7 @@ void ChangeDirCommand::execute() {
 
     if (first_arg == "-") {
         if (plast_cwd[0] == '\0') {
-            cout<<("smash error: cd: OLDPWD not set")<<endl;
+            cerr << ("smash error: cd: OLDPWD not set") << endl;
             return;
         }
         if (chdir(plast_cwd) != 0) {
@@ -363,10 +364,10 @@ void ChangeDirCommand::execute() {
     }
     //from here chdir should eat it
     if (chdir(first_arg.c_str()) != 0) {
-        perror("smash error: chdir failed");
+        HANDLE_ERROR(chdir);
         return;
     }
-    updateLastPWD( buff_cwd);
+    updateLastPWD(buff_cwd);
 }
 /** execute pipe commands */
 void PipeCommand::execute() {
@@ -385,7 +386,7 @@ void PipeCommand::execute() {
     if (pid1 == 0) {
         // "in" side of the pipe
         //close the read side
-        if(setpgrp() == FAIL){
+        if (setpgrp() == FAIL) {
             HANDLE_ERROR(setpgrp);
             return;
             close(pipefd[0]);
@@ -415,7 +416,7 @@ void PipeCommand::execute() {
     if (pid2 == 0) {
         // "out" side of the pipe
         //close the write side
-        if(setpgrp() == FAIL){
+        if (setpgrp() == FAIL) {
             HANDLE_ERROR(setpgrp);
             return;
             //handle fd's
@@ -457,12 +458,14 @@ void PipeCommand::execute() {
 //redirection execute
 void RedirectionCommand::execute() {
     int fd;
+    mode_t old_mask = umask(0);
     if (overwrite) {
-        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     }
     else {
-        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, S_IRWXU);
+        fd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     }
+    umask(old_mask);
     if (fd == FAIL) {
         HANDLE_ERROR(open);
         return;
@@ -518,56 +521,57 @@ bool DirEntCmp1(const DirEntry& a, const DirEntry& b) {
 }
 
 void sortDirEntryVector(vector<DirEntry>& entries) {
-    sort(entries.begin(),entries.end(),DirEntCmp1);
+    sort(entries.begin(), entries.end(), DirEntCmp1);
 }
 
 void printDirEntryVector(vector<DirEntry>& entries) {
     for (auto entry : entries) {
-        string type= entry.isDir ? "directory: " : "file: ";
+        string type = entry.isDir ? "directory: " : "file: ";
         cout << type << entry.name << endl;
     }
 }
 void ListDirCommand::execute() {
-    if (argc>2) {
-        cout <<("smash: listdir: too many arguments")<<endl;
+    if (argc > 2) {
+        cerr << ("smash: listdir: too many arguments") << endl;
         return;
     }
     string folder_path;
-    if (argc>1) {
-        folder_path= argv[1];
-    }else {
+    if (argc > 1) {
+        folder_path = argv[1];
+    }
+    else {
         char buff[COMMAND_MAX_LENGTH];
         getCWD(buff);
-        if (!buff){
+        if (!buff) {
             HANDLE_ERROR("getcwd");
         };
-        folder_path=buff;
+        folder_path = buff;
     }
     char dir_buff[DIR_BUFF_SIZE];   //piaza said 4096 bytes
-    linux_dirent *dirent;
-    int file_descriptor=open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
-    if(file_descriptor==-1) {
+    linux_dirent* dirent;
+    int file_descriptor = open(folder_path.c_str(), O_RDONLY | O_DIRECTORY);
+    if (file_descriptor == -1) {
         perror("smash error: open failed");
         return;
     }
     ssize_t b_read;
     vector<DirEntry> dir_entries;
     while (1) {
-        b_read=syscall(SYS_getdents,file_descriptor, dir_buff, DIR_BUFF_SIZE);
-        if(b_read==0) {
+        b_read = syscall(SYS_getdents, file_descriptor, dir_buff, DIR_BUFF_SIZE);
+        if (b_read == 0) {
             break;
         }
-        if (b_read==-1) {
+        if (b_read == -1) {
             perror("smash error: getdents failed");
             return;
         }
-        for (int bpos=0; bpos<b_read;) {
-            dirent=(linux_dirent*)(dir_buff+bpos);
-            bpos+=dirent->d_reclen;
-            char dir_type= *(dir_buff + bpos + dirent->d_reclen - 1);
-            if(dir_type==DT_REG || dir_type==DT_DIR ){
-                if (dirent->d_name[0]=='.'){continue;}
-                dir_entries.push_back({string(dirent->d_name), dir_type==DT_DIR});
+        for (int bpos = 0; bpos < b_read;) {
+            dirent = (linux_dirent*) (dir_buff + bpos);
+            bpos += dirent->d_reclen;
+            char dir_type = *(dir_buff + bpos + dirent->d_reclen - 1);
+            if (dir_type == DT_REG || dir_type == DT_DIR) {
+                if (dirent->d_name[0] == '.') { continue; }
+                dir_entries.push_back({ string(dirent->d_name), dir_type == DT_DIR });
             }
         }
     }
@@ -577,37 +581,37 @@ void ListDirCommand::execute() {
 }
 
 void GetUserCommand::execute() {
-    if (argc>2) {
-        cout<<("smash error: getuser: too many arguments") <<endl;
+    if (argc > 2) {
+        cerr << ("smash error: getuser: too many arguments") << endl;
         return;
     }
-    pid_t p=argc > 1? atoi(argv[1]): getpid();
-    if (kill(p,0)!=0) {
-        cout <<"smash error: getuser: process " << to_string(p) <<" does not exist"<<endl;
+    pid_t p = argc > 1 ? atoi(argv[1]) : getpid();
+    if (kill(p, 0) != 0) {
+        cerr << "smash error: getuser: process " << to_string(p) << " does not exist" << endl;
         return;
     }
-    string status_file="/proc/" +to_string(p)+"/status";
-    int file_d=open(status_file.c_str(), O_RDONLY);
-    if (file_d==-1) {
+    string status_file = "/proc/" + to_string(p) + "/status";
+    int file_d = open(status_file.c_str(), O_RDONLY);
+    if (file_d == -1) {
         perror("smash error: open failed");
         return;
     }
     char buff[DIR_BUFF_SIZE];
-    ssize_t b_read= read(file_d, buff, DIR_BUFF_SIZE-1);
-    if (b_read==-1) {
+    ssize_t b_read = read(file_d, buff, DIR_BUFF_SIZE - 1);
+    if (b_read == -1) {
         close(file_d);
         perror("smash error: read failed");
         return;
     }
-    buff[b_read]='\0';
+    buff[b_read] = '\0';
     close(file_d);
-    string file_contents=buff;
-    string user_id_str=file_contents.substr(file_contents.find("Uid:")+5);
-    user_id_str=user_id_str.substr(0,user_id_str.find_first_of('\n'));
-    string group_id_str=file_contents.substr(file_contents.find("Gid:")+5);
-    group_id_str=group_id_str.substr(0,group_id_str.find_first_of('\n'));
-    struct passwd* user =getpwuid(stoul(user_id_str.substr(user_id_str.find('\t'))));
-    struct group* group =getgrgid(stoul(group_id_str.substr(group_id_str.find('\t'))));
+    string file_contents = buff;
+    string user_id_str = file_contents.substr(file_contents.find("Uid:") + 5);
+    user_id_str = user_id_str.substr(0, user_id_str.find_first_of('\n'));
+    string group_id_str = file_contents.substr(file_contents.find("Gid:") + 5);
+    group_id_str = group_id_str.substr(0, group_id_str.find_first_of('\n'));
+    struct passwd* user = getpwuid(stoul(user_id_str.substr(user_id_str.find('\t'))));
+    struct group* group = getgrgid(stoul(group_id_str.substr(group_id_str.find('\t'))));
 
     cout << "User: " << user->pw_name << endl << "Group: " << group->gr_name << endl;
 }
@@ -618,27 +622,28 @@ void aliasCommand::execute() {
         smash.aliases.printAliases();
         return;
     }
-    if (!Aliases::isLegalAliasFormat(commandString)) {
-        cout<<("smsh error: alias: invalid alias format")<<endl;
+    if (!Aliases::isLegalAliasFormat(cmd_Copy)) {
+        cerr << ("smash error: alias: invalid alias format") << endl;
         return;
     }
     string key, value;
-    Aliases::parseAliasCommand(commandString, &key, &value);
+    Aliases::parseAliasCommand(cmd_Copy, &key, &value);
 
-    if (!smash.aliases.addAlias(commandString)) {
-        cout << "smash error: alias " << key << " already exists or is a reserved word"<<endl;
+    if (!smash.aliases.addAlias(cmd_Copy)) {
+        cerr << "smash error: alias " << key << " already exists or is a reserved word" << endl;
     }
 }
 
 void unaliasCommand::execute() {
     if (argc == 1) {
-        cout<<("smash error: unalias: not enough arguments")<<endl;
+        cerr << ("smash error: unalias: not enough arguments") << endl;
         return;
     }
     SmallShell& smash = SmallShell::getInstance();
     string key = _trim(argv[1]);
     if (!smash.aliases.removeAlias(key)) {
-         cout << "smash error: unalias: " <<key << " alias does not exist";    }
+        cerr << "smash error: unalias: " << key << " alias does not exist" << endl;
+    }
 }
 
 
@@ -674,7 +679,7 @@ void ExternalCommand::execute() {
 
         newargv[0] = const_cast<char*>(path); //im not going to change any of these, compiler should chill out fr fr
         newargv[1] = const_cast<char*>(flag);
-        newargv[2] = const_cast<char*>(command.c_str());   
+        newargv[2] = const_cast<char*>(command.c_str());
         newargv[3] = nullptr;
         wildcard = true;
     }
@@ -803,7 +808,7 @@ void JobsList::bringJobToForeground(int jobId) {
     SmallShell& shell = SmallShell::getInstance();
     pid_t pid = job->pid;
     shell.jobsList.removeJobById(job->id);
-    shell.currentProcess = job->pid;
+    shell.currentProcess = pid;
     if (waitpid(pid, nullptr, 0) == FAIL) {
         HANDLE_ERROR(waitpid);
     }
@@ -824,11 +829,11 @@ Aliases::Aliases() {
 };
 
 bool Aliases::isLegalAliasFormat(const char* cmd_line) {
-    return std::regex_match(cmd_line,pattern);
+    return std::regex_match(cmd_line, pattern);
 }
 
 bool Aliases::isLegalAliasFormat(const string& cmd_line) {
-    return regex_match(cmd_line,pattern);
+    return regex_match(cmd_line, pattern);
 }
 
 void Aliases::deAlias(char cmd_line[COMMAND_MAX_LENGTH]) {
@@ -840,8 +845,8 @@ void Aliases::deAlias(char cmd_line[COMMAND_MAX_LENGTH]) {
     if (it != aliases_map.end()) {
         if (first_word == cmd_line) {
             dealiased_str = it->second;
-        }        
-else {
+        }
+        else {
             dealiased_str = it->second + dealiased_str.substr(first_ws_pos);
         }
         memset(cmd_line, 0, COMMAND_MAX_LENGTH);
@@ -900,7 +905,6 @@ bool Aliases::parseAliasCommand(const char* cmd_line, string* key, string* value
     *key = trimmed.substr(key_begin_pos, key_end_pos - key_begin_pos);
     *key = _trim(*key);
     *value = trimmed.substr(value_begin_pos, value_end_pos - value_begin_pos);
-    *value = _trim(*value);
     return true;
 }
 
