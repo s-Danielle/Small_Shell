@@ -1,37 +1,130 @@
-The given skeleton includes the following files:
-- Commands.h/Commands.cpp: The supported commands of smash, each command is represented by a class that inherits from either BuiltInCommand or ExternalCommand. Each command that you add should implement execute, which is a virtual method, that executes the command.
-- signals.h/signals.cpp: Declares and implements requires signal handler: SIGINT handler to handle Ctr+C If you are going to implement the bonus part then you have to implement additional handler for SIG_ALRM.
-- smash.cpp: Contains the smash main, which runs an infinite loop that receives the next typed command and sends it to SmallShell::executeCommand to handle it. Please note that if you are going to implement the bonus part, then you have to define a handler for SIG_ALRM in the main (in this file).
-- Makefile: builds and tests using a basic test your smash. You can use "make zip" to prepare a zip file for submission; this is recommended, which makes sure you follow our submission's structure. 
-- test_input1.txt / test_expected_output1.txt: basic test files that being used by the given Makefile to run a basic test on your smash implementation. 
+## Overview
+**Smash** is a small shell program that emulates the behavior of a Unix-like terminal. It supports both built-in and external commands, providing a modular and extensible design for command execution. The shell includes basic job management, I/O redirection, signal handling, and more. This implementation follows a structured design using **Singleton** and **Factory Method** patterns for modularity and clarity.
 
-Our solution and the skeleton code as well use a few known design patterns for making the code modular and readable. We use mainly two design pattersn: Singleton and Factory Method. There are many resources on the internet explaining about these design patters; they are, sometimes, known as the GoF (Gan of Four) design patters. We recommend you do a quick review of these two design patters for a better understanding of the skeleton.
+## Features
+- **Built-in Commands**:
+  - `chprompt`: Change the shell prompt.
+  - `pwd`: Print the working directory.
+  - `showpid`: Display the process ID of the shell.
+  - `cd`: Change the current directory.
+  - `fg`: Bring a background job to the foreground.
+  - `jobs`: Display the list of current jobs.
+  - `kill`: Terminate a job by its ID.
+- **External Commands**:
+  - Execute any valid executable in the system, including commands like `ls`, `cat`, or scripts.
+- **Background Execution**:
+  - Support for running external commands in the background using `&`.
+- **I/O Redirection**:
+  - Redirect input and output using `>`, `<`, and `>>`.
+- **Signal Handling**:
+  - `SIGINT`: Handle Ctrl+C to terminate foreground jobs.
+  - `SIGALRM` (Bonus): Manage time-limited alarms for processes.
 
-How to start:
-First, you have to understand the skeleton design.
-The given skeleton works as follows:
-- in smash.cpp the main function runs an infinite loop that reads the next typed command
-- after reading the next command it calls the SmallShell::executeCommand
-- SmallShell::executeCommand should create the relevant command class using the factory method CreateCommand
-- After instantiating the relevant Command class, you have to:
-	- fork if needed
-	- call setpgrp from the child process
-	- run the created-command execute method (from the child process or parent process?)
-	- should the parent wait for the child? if yes, then how? using wait or waitpid?
+---
 
-To implement new commands, you need to:
-- Implement the new command Class in Commands.cpp
-- Add any private data fields in the created class and initialize them in the ctor
-- Implement the new command execute method
-- Add if statement to handle it in the SmallShell::CreateCommand
+## File Structure
 
-We recommend that you start your implementation with:
-- the simple built-in commands (e.g., chprompt/pwd/showpid/cd/...), after making sure that they work fine with no bugs, then move forward
-- implement the rest of the built-in commands 
-- implement the external commands
-- implement the execution of external commands in the background
-- implement the jobs list and all relevant commands (fg/jobs/...) 
-- implement the I/O redirection
-- Finally implement the bonus command and pipes.
+### Core Files
+- **`Commands.h`/`Commands.cpp`**:
+  - Defines classes for all commands. Each command is represented by a class inheriting from `BuiltInCommand` or `ExternalCommand`.
+  - Each command implements the `execute()` virtual method for execution logic.
 
-Good luck :)
+- **`signals.h`/`signals.cpp`**:
+  - Handles signal management, including custom handlers for `SIGINT` and `SIGALRM`.
+
+- **`smash.cpp`**:
+  - Contains the main function, which runs an infinite loop to read and process commands using the `SmallShell::executeCommand` method.
+
+### Support Files
+- **`Makefile`**:
+  - Builds the project and runs basic tests using provided input/output files.
+  - Example targets:
+    - `make`: Build the project.
+    - `make test`: Run basic tests using `test_input1.txt`.
+    - `make zip`: Prepare a submission zip file.
+
+- **`test_input1.txt` / `test_expected_output1.txt`**:
+  - Basic test cases to validate functionality.
+
+---
+
+## Design Patterns
+- **Singleton Pattern**:
+  - Used for `SmallShell` to ensure there is only one instance managing the shell state and commands.
+
+- **Factory Method Pattern**:
+  - Used in `SmallShell::CreateCommand` to instantiate the appropriate command class based on user input.
+
+---
+
+## How to Build
+1. Clone the repository:
+   ```bash
+   git clone <repository_url>
+   cd smash
+   ```
+2. Build the project using the Makefile:
+   ```bash
+   make
+   ```
+
+---
+
+## How to Run
+1. Run the shell program:
+   ```bash
+   ./smash
+   ```
+2. Use built-in commands or external commands as needed.
+
+---
+
+## How to Test
+Run the provided test cases to validate functionality:
+```bash
+make test
+```
+This will use `test_input1.txt` and compare the output with `test_expected_output1.txt`.
+
+---
+
+## Example Commands
+### Built-In Commands
+```bash
+smash> chprompt new_prompt
+new_prompt> pwd
+/home/user
+new_prompt> showpid
+12345
+new_prompt> cd /tmp
+```
+
+### External Commands
+```bash
+smash> ls -l
+smash> gcc main.cpp -o main &
+```
+
+### Job Management
+```bash
+smash> jobs
+[1] sleep 1000 &
+smash> fg 1
+```
+
+---
+
+## Bonus Features (Optional)
+- **SIGALRM Handling**:
+  - Allow users to set time limits for command execution using alarms.
+
+---
+
+## Good Practices
+- Modular design ensures each command is independent and easy to extend.
+- Signal handling ensures smooth operation and proper cleanup of child processes.
+
+---
+
+## Conclusion
+This shell is a lightweight and extensible implementation of a Unix-like terminal. Its modular design and use of design patterns make it easy to maintain and extend. Use this as a foundation to explore advanced shell features!
